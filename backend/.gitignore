@@ -1,0 +1,11 @@
+# Node.js dependencies
+node_modules/
+
+# Upload folder 
+uploads/
+
+# Environment variables
+.env
+
+# Package lock file (optional, can be kept if needed)
+package-lock.json 

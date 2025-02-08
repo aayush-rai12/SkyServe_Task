@@ -1,0 +1,8 @@
+# Node dependencies
+node_modules/
+
+# Package lock file (optional, can be kept if needed)
+package-lock.json
+
+# Editor files
+.vscode/

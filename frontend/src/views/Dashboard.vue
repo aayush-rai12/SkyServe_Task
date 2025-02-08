@@ -1,0 +1,865 @@
+<template>
+  <div v-if="!user" class="notification">
+    <p>Please log in to access your dashboard.</p>
+    <router-link to="/login" class="btn-link">Go to Login</router-link>
+  </div>
+  <div v-else>
+    <div class="dashboard-container">
+      <!-- Sidebar for User Profile -->
+      <div class="sidebar">
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="profile-avatar">
+              <img src="../assets/images/me1.png" alt="User Avatar" />
+            </div>
+          </div>
+          <h2 class="profile-name">{{ user.name }}</h2>
+          <p class="profile-location">{{ user.location }}</p>
+          <p class="profile-email">{{ user.email }}</p> 
+          <div class="profile-actions">
+            <button @click="logout" class="logout-btn"><i class="fa fa-sign-out-alt"></i> Logout</button>
+          </div>
+        </div>
+        <div class="profile-note">
+          <p><strong>Note:</strong> Use this page to upload and manage your GeoJSON files. You can upload, edit, and
+            visualize your data here.</p>
+        </div>
+      </div>
+
+      <!-- Main Content Area -->
+      <div class="main-content">
+        <div class="upload-section">
+          <label for="file-upload" class="upload-label">
+            <span>Upload GeoJSON File</span>
+          </label>
+          <input type="file" accept=".geojson" id="file-upload" @change="handleFileUpload" class="file-input" />
+          <button v-if="uploadedFile" @click="clearFile" class="clear-btn">
+            Clear File
+          </button>
+        </div>
+
+        <div class="geojson-data">
+          <div v-if="geoJSONData" class="geojson-card">
+            <h3>GeoJSON Data: <em>{{ uploadedFile.name }}</em></h3>
+            <div class="json-display">
+              <textarea v-if="editMode" v-model="editableGeoJSON" class="edit-textarea"
+                placeholder="Edit GeoJSON data..."></textarea>
+              <pre v-else-if="isCollapsed">{{ truncatedGeoJSON }}</pre>
+              <pre v-else>{{ geoJSONData }}</pre>
+            </div>
+            <div class="action-buttons">
+              <button @click="toggleCollapse" class="collapse-btn" v-if="!editMode">
+                <i :class="isCollapsed ? 'fa fa-chevron-down' : 'fa fa-chevron-up'"></i>
+                {{ isCollapsed ? "Read More" : "Read Less" }}
+              </button>
+              <button @click="saveGeoJSONData" class="save-btn" :disabled="isLoading" v-if="!editMode">
+                <i class="fa fa-save"></i> {{ isLoading ? "Saving..." : "Save GeoJSON" }}
+              </button>
+              <button @click="saveChanges" class="save-changes-btn" v-if="editMode">
+                <i class="fa fa-save"></i> Save Changes
+              </button>
+              <button @click="cancelEdit" class="cancel-edit-btn" v-if="editMode">
+                <i class="fa fa-times"></i> Cancel
+              </button>
+            </div>
+          </div>
+          <p v-else class="no-file-message">No file selected. Please upload a file to view its data.</p>
+        </div>
+      </div>
+
+      <!-- File Management Section -->
+      <div class="file-management">
+        <div v-if="uploadedFiles.length" class="file-list">
+          <h3>Uploaded Files</h3>
+          <div v-for="(file, index) in uploadedFiles" :key="index" class="file-item">
+            <div class="file-name">
+              <p style="margin-top: 1px;margin-bottom: 1px;"><strong>{{ file.name }}</strong></p>
+            </div>
+            <div class="file-actions">
+              <!-- <button @click="confirmToggleFile(file)" class="enable-disable-btn" :class="{ enabled: file.enabled }">
+                <i :class="file.enabled ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
+                {{ file.enabled ? "Disable" : "Enable" }}
+              </button> -->
+              <button @click="mapFile(file)" class="map-btn">
+                <i class="fas fa-map"></i> Map
+              </button>
+              <div class="edit-delete-container">
+                <button @click="editFile(file)" class="edit-btn">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button @click="confirmDeleteFile(index)" class="delete-btn">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="no-files-message">No files uploaded yet.</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import apiClient from '../utils/apiClient';
+import toGeoJSON from '@mapbox/togeojson';
+import { DOMParser } from 'xmldom';
+
+export default {
+  data() {
+    return {
+      user: JSON.parse(localStorage.getItem("user")) || null,
+      uploadedFile: null,
+      uploadedFiles: [],
+      geoJSONData: null,
+      editableGeoJSON: "",
+      isCollapsed: true,
+      isLoading: false,
+      editMode: false,
+    };
+  },
+  async created() {
+    if (this.user) {
+      await this.fetchUserFiles();
+    }
+  },
+  computed: {
+    truncatedGeoJSON() {
+      if (this.geoJSONData) {
+        const jsonStr = JSON.stringify(this.geoJSONData, null, 2);
+        return jsonStr.length > 200 ? jsonStr.substring(0, 200) + "..." : jsonStr;
+      }
+      return "";
+    },
+  },
+  methods: {
+    toggleCollapse() {
+      this.isCollapsed = !this.isCollapsed;
+    },
+    logout() {
+      localStorage.removeItem("user");
+      this.user = null;
+      this.$router.push("/login");
+    },
+    async fetchUserFiles() {
+      try {
+        const response = await apiClient.get(`/files/user/${this.user._id}`);
+        this.uploadedFiles = response.data;
+        const enabledFile = this.uploadedFiles.find(file => file.enabled);
+        if (enabledFile) {
+          this.geoJSONData = enabledFile.data;
+          this.uploadedFile = enabledFile;
+        }
+      } catch (error) {
+        console.error("Error fetching files:", error);
+        alert("Failed to fetch uploaded files.");
+      }
+    },
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      console.log(file);
+      if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+          alert("File size exceeds 2MB. Please upload a smaller file.");
+          return;
+        }
+        if (file.name.toLowerCase().endsWith(".geojson")) {
+          this.uploadedFile = file;
+          this.readGeoJSONFile(file);
+        } else if (file.name.toLowerCase().endsWith(".kml")) {
+          this.uploadedFile = file;
+          this.readGeoJSONFile(file);
+        } else {
+          alert("Please upload a valid GeoJSON file.");
+        }
+      }
+    },
+    readGeoJSONFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const fileContent = e.target.result;
+
+          // Check if the file is a KML file
+          if (file.name.toLowerCase().endsWith('.kml')) {
+            alert("Processing KML file...");
+            // Parse KML content
+            const kmlDom = new DOMParser().parseFromString(fileContent, 'text/xml');
+            const geoJSON = toGeoJSON.kml(kmlDom);
+            console.log("KML to GeoJSON:", geoJSON);
+
+            // Validate the converted GeoJSON
+            if (geoJSON && geoJSON.type === "FeatureCollection" && Array.isArray(geoJSON.features)) {
+              this.geoJSONData = geoJSON;
+              this.uploadedFile.data = geoJSON;
+              alert("KML file processed successfully.");
+            } else {
+              alert("Invalid KML structure.");
+              this.clearFile();
+            }
+          }
+          // Check if the file is a GeoJSON file
+          else if (file.name.toLowerCase().endsWith('.geojson')) {
+            alert("Processing GeoJSON file...");
+            const data = JSON.parse(fileContent);
+            console.log("GeoJSON data:", data);
+
+            // Validate the GeoJSON structure
+            if (data && data.type === "FeatureCollection" && Array.isArray(data.features)) {
+              this.geoJSONData = data;
+              this.uploadedFile.data = data;
+              alert("GeoJSON file processed successfully.");
+            } else {
+              alert("Invalid GeoJSON structure.");
+              this.clearFile();
+            }
+          }
+          // Handle unsupported file types
+          else {
+            alert("Unsupported file type. Please upload a GeoJSON or KML file.");
+            this.clearFile();
+          }
+        } catch (error) {
+          alert("Error parsing file: " + error.message);
+          this.clearFile();
+        }
+      };
+      reader.readAsText(file);
+    },
+    clearFile() {
+      this.uploadedFile = null;
+      this.geoJSONData = null;
+      this.editableGeoJSON = "";
+      this.editMode = false;
+    },
+    confirmToggleFile(file) {
+      const confirmed = confirm(`${file.enabled ? "Disable" : "Enable"} this file?`);
+      if (confirmed) {
+        this.toggleFile(file);
+      }
+    },
+    toggleFile(file) {
+      this.uploadedFiles.forEach(f => {
+        f.enabled = false;
+      });
+      file.enabled = true;
+      this.geoJSONData = file.enabled ? file.data : null;
+    },
+    async saveGeoJSONData() {
+      if (!this.geoJSONData || !this.uploadedFile) {
+        alert("No file or data to save.");
+        return;
+      }
+      this.isLoading = true;
+      try {
+        const userData = JSON.parse(localStorage.getItem("user"));
+        const payload = {
+          geoJSONData: this.geoJSONData,
+          fileName: this.uploadedFile.name,
+          user: {
+            _id: userData._id,
+            email: userData.email,
+          },
+        };
+        const response = await apiClient.post("/files/upload", payload);
+        alert("GeoJSON data saved successfully!");
+        this.uploadedFiles.push({
+          name: this.uploadedFile.name,
+          data: this.geoJSONData,
+          enabled: true,
+          _id: response.data._id,
+        });
+        this.uploadedFiles.forEach(f => {
+          if (f.name !== this.uploadedFile.name) {
+            f.enabled = false;
+          }
+        });
+        await this.fetchUserFiles();
+      } catch (error) {
+        console.error("Error saving GeoJSON data:", error);
+        alert("Failed to save GeoJSON data.");
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    async editFile(file) {
+      try {
+        let fileContent;
+        if (file === this.uploadedFile) {
+          if (!this.geoJSONData) {
+            alert("No GeoJSON data found for the uploaded file.");
+            return;
+          }
+          fileContent = JSON.stringify(this.geoJSONData, null, 2);
+        } else if (file.path) {
+          const filename = file.path.split('\\').pop();
+          const response = await apiClient.get(`/files/${filename}`);
+          fileContent = response.data.data;
+        } else {
+          alert("No content available for this file.");
+          return;
+        }
+        this.editMode = true;
+        this.editableGeoJSON = fileContent;
+      } catch (error) {
+        console.error("Error fetching file content:", error);
+        alert("Failed to load file content.");
+      }
+    },
+    saveChanges() {
+      try {
+        const parsedData = JSON.parse(this.editableGeoJSON);
+        if (parsedData && parsedData.type === "FeatureCollection" && Array.isArray(parsedData.features)) {
+          this.geoJSONData = parsedData;
+          this.editMode = false;
+          alert("Changes saved successfully!");
+        } else {
+          alert("Invalid GeoJSON structure. Please correct the data.");
+        }
+      } catch (error) {
+        alert("Invalid JSON format. Please correct the data.");
+      }
+    },
+    cancelEdit() {
+      this.editMode = false;
+    },
+    mapFile(file) {
+      if (file.data) {
+        this.$router.push({
+          name: 'map',
+          params: { geoJSONData: JSON.stringify(file.data) }
+        });
+      } else if (file.path) {
+        this.fetchFileData(file.path);
+      } else {
+        alert("No GeoJSON data or path available for this file.");
+      }
+    },
+    async fetchFileData(filePath) {
+      try {
+        const filename = filePath.split('\\').pop();
+        const response = await apiClient.get(`/files/${filename}`);
+        const fileContent = response.data.data;
+        if (fileContent) {
+          this.$router.push({
+            name: 'map',
+            query: { geoJSONData: JSON.stringify(fileContent) }
+          });
+        } else {
+          alert("No GeoJSON data found for this file.");
+        }
+      } catch (error) {
+        console.error("Error fetching GeoJSON data:", error);
+        alert("Failed to fetch GeoJSON data.");
+      }
+    },
+    confirmDeleteFile(index) {
+      const confirmed = confirm("Are you sure you want to delete this file?");
+      if (confirmed) {
+        this.deleteFile(index);
+      }
+    },
+    async deleteFile(index) {
+      const file = this.uploadedFiles[index];
+      try {
+        await apiClient.delete(`/files/${file._id}`);
+        this.uploadedFiles.splice(index, 1);
+        this.geoJSONData = null;
+      } catch (error) {
+        console.error("Error deleting file:", error);
+        alert("Failed to delete file.");
+      }
+    },
+  },
+};
+</script>
+
+<style scoped>
+/* Dashboard Container */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f7f7f7;
+}
+
+/* Notification Style */
+.notification {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 18px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  width: 80%;
+  max-width: 500px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: slideIn 0.5s ease-in-out;
+}
+
+/* Link Style */
+.btn-link {
+  padding: 7px;
+  font-size: 16px;
+  color: #fff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.btn-link:hover {
+  background-color: #0056b3;
+}
+
+/* Animation for the notification appearance */
+@keyframes slideIn {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Profile Section */
+.sidebar {
+  width: 100%;
+  background-color: #ffffff;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.profile-card {
+  width: 100%;
+  padding: 25px 0px;
+  background-color: #1d1f2e;
+  color: #fff;
+  text-align: center;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  font-family: 'Arial', sans-serif;
+}
+
+.profile-header {
+  position: relative;
+}
+
+.profile-avatar img {
+  max-width: 150px;
+  max-height: 140px;
+  border-radius: 40px;
+  object-fit: cover;
+  border: 2px solid #3498db;
+  margin: 0 auto;
+}
+
+.profile-name {
+  font-size: 22px;
+  font-weight: bold;
+  margin: 10px 0 5px;
+}
+
+.profile-location {
+  font-size: 14px;
+  color: #a5a5a5;
+  margin-bottom: 10px;
+}
+
+.profile-email {
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.profile-actions button {
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 14px;
+  margin: 0 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.profile-actions .logout-btn {
+  background-color: #34c759;
+}
+
+.profile-actions .logout-btn:hover {
+  background-color: white;
+  color: #28a745;
+}
+
+/* Main Content Area */
+.main-content {
+  width: auto;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  margin: 0 auto;
+}
+
+/* Upload Section */
+.upload-section {
+  /* display: flex!important; */
+  /* flex-direction: column; */
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.upload-label {
+  background-color: #1d1f2e;
+  color: white;
+  padding: 8px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background-color 0.3s ease;
+}
+
+.upload-label:hover {
+  background-color: #2c3e50;
+}
+
+.file-input {
+  display: none;
+}
+
+.clear-btn {
+  background-color: #e74c3c;
+  color: white;
+  font-size: 16px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.clear-btn:hover {
+  background-color: #c0392b;
+}
+
+/* GeoJSON Data */
+.geojson-data {
+  background-color: #f9f9f9;
+  padding: 0.5rem 0;
+  width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.geojson-data h3 {
+  font-size: 20px;
+  color: #3498db;
+  margin-bottom: 1rem;
+}
+
+.geojson-data pre {
+  background-color: #2c3e50;
+  color: #ecf0f1;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 14px;
+  overflow-x: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.collapse-btn {
+  background-color: #3498db;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin: 10px;
+}
+
+.collapse-btn:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+/* File Management */
+.file-management {
+  width: 100%;
+  padding: 1rem;
+  background-color: #fff;
+  border-radius: 8px;
+}
+
+.file-list {
+  background-color: #1d1f2e;
+  color: #fff !important;
+  text-align: center;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  padding: 1px;
+}
+
+.file-item {
+  display: grid;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding: 0.3rem;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.file-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.file-name {
+  color: #1d1f2e;
+  margin-right: 5px;
+}
+
+.file-actions {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+/* Enable/Disable Button */
+.enable-disable-btn {
+  padding: 5px 8px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 35px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.enable-disable-btn.enabled {
+  background-color: #f39c12;
+}
+
+.enable-disable-btn:hover {
+  background-color: #27ae60;
+}
+
+/* Map Button */
+.map-btn {
+  padding: 5px 10px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 35px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.map-btn:hover {
+  background-color: #2980b9;
+}
+
+.json-display {
+  padding: 1rem;
+}
+
+.save-btn {
+  background-color: #34c759;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin: 10px 10px auto 10px;
+}
+
+.file-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.edit-delete-container {
+  display: flex;
+  gap: 0.25rem;
+  background-color: #f0f0f0;
+  padding: 4px;
+  border-radius: 20px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 8px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.edit-btn {
+  background-color: #fd7e14;
+  color: white;
+}
+
+.delete-btn {
+  background-color: #e74c3c;
+  color: white;
+}
+
+/* edit functionality */
+.edit-textarea {
+  width: 100%;
+  height: 200px;
+  padding: 1rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.save-changes-btn {
+  background-color: #28a745;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.save-changes-btn:hover {
+  background-color: #218838;
+}
+
+.cancel-edit-btn {
+  background-color: #dc3545;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.cancel-edit-btn:hover {
+  background-color: #c82333;
+}
+
+/* Media Queries for Responsiveness */
+@media (min-width: 768px) {
+  .dashboard-container {
+    flex-direction: row;
+  }
+
+  .sidebar {
+    width: 300px;
+  }
+
+  .main-content {
+    width: auto;
+  }
+
+  .file-management {
+    width: 30%;
+  }
+
+  .upload-section {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+
+  .sidebar,
+  .main-content,
+  .file-management {
+    width: auto;
+  }
+
+  .upload-section {
+    flex-direction: column;
+  }
+
+  .file-actions {
+    /* flex-direction: column; */
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .file-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 80%;
+  }
+}
+.profile-note {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #fff9c4;  
+  border-radius: 8px;
+  border: 1px solid #1d1f2e;
+  font-size: 14px;
+  color: #003366 ; 
+  text-align: center;
+}
+
+.profile-note p {
+  margin: 0;
+}
+
+.profile-note strong {
+  color: #3498db; /* Highlight the "Note:" text */
+}
+@media (max-width: 480px) {
+  .profile-card {
+    padding: 15px 0; /* Reduce padding for smaller screens */
+  }
+
+  .profile-name {
+    font-size: 18px; /* Smaller font size for profile name */
+  }
+
+  .profile-email {
+    font-size: 14px; /* Smaller font size for email */
+  }
+
+  .upload-label {
+    font-size: 16px; /* Smaller font size for upload label */
+    padding: 8px 16px; /* Adjust padding */
+  }
+
+  .clear-btn {
+    font-size: 14px; /* Smaller font size for clear button */
+    padding: 8px 16px; /* Adjust padding */
+  }
+}
+</style>
