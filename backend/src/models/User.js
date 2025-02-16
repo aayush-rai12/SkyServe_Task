@@ -16,8 +16,8 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
   image: {
-    type: String, // Store the image path
-    default: null,
+    url: { type: String }, // Cloudinary image URL
+    public_id: { type: String }, // Cloudinary public ID
   },
   password: {
     type: String,
@@ -25,4 +25,4 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model('User', userSchema);

@@ -10,12 +10,15 @@
         <div class="profile-card">
           <div class="profile-header">
             <div class="profile-avatar">
-              <img src="../assets/images/me1.png" alt="User Avatar" />
+
+              <!-- <img src="" alt="User Avatar" /> -->
+              <img :src="user.image.url" alt="User Avatar">
+
             </div>
           </div>
           <h2 class="profile-name">{{ user.name }}</h2>
           <p class="profile-location">{{ user.location }}</p>
-          <p class="profile-email">{{ user.email }}</p> 
+          <p class="profile-email">{{ user.email }}</p>
           <div class="profile-actions">
             <button @click="logout" class="logout-btn"><i class="fa fa-sign-out-alt"></i> Logout</button>
           </div>
@@ -33,7 +36,7 @@
             <span>Upload GeoJSON File</span>
           </label>
           <input type="file" accept=".geojson" id="file-upload" @change="handleFileUpload" class="file-input" />
-          <button v-if="uploadedFile" @click="clearFile" class="clear-btn">
+          <button v-if="uploadedFile" @click="clearFile" class="clear-btn upload-label">
             Clear File
           </button>
         </div>
@@ -52,7 +55,7 @@
                 <i :class="isCollapsed ? 'fa fa-chevron-down' : 'fa fa-chevron-up'"></i>
                 {{ isCollapsed ? "Read More" : "Read Less" }}
               </button>
-              <button @click="saveGeoJSONData" class="save-btn" :disabled="isLoading" v-if="!editMode">
+              <button @click="saveGeoJSONData" class="save-btn" :disabled="isLoading" v-if="!editMode && !isSaved">
                 <i class="fa fa-save"></i> {{ isLoading ? "Saving..." : "Save GeoJSON" }}
               </button>
               <button @click="saveChanges" class="save-changes-btn" v-if="editMode">
@@ -71,7 +74,8 @@
       <div class="file-management">
         <div v-if="uploadedFiles.length" class="file-list">
           <h3>Uploaded Files</h3>
-          <div v-for="(file, index) in uploadedFiles" :key="index" class="file-item">
+          <!-- Display files for the current page -->
+          <div v-for="(file, index) in paginatedFiles" :key="index" class="file-item">
             <div class="file-name">
               <p style="margin-top: 1px;margin-bottom: 1px;"><strong>{{ file.name }}</strong></p>
             </div>
@@ -92,6 +96,17 @@
                 </button>
               </div>
             </div>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div class="pagination" v-if="totalPages > 1">
+            <button @click="previousPage" :disabled="currentPage === 1" class="pagination-btn">
+              <i class="fa-solid fa-circle-chevron-left"></i> Previous
+            </button>
+            <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+            <button @click="nextPage" :disabled="currentPage === totalPages" class="pagination-btn">
+            Next <i class="fa-solid fa-circle-chevron-right"></i>
+            </button>
           </div>
         </div>
         <p v-else class="no-files-message">No files uploaded yet.</p>
@@ -116,6 +131,9 @@ export default {
       isCollapsed: true,
       isLoading: false,
       editMode: false,
+      currentPage: 1, // Track the current page
+      itemsPerPage: 5, // Number of items to display per page
+      isSaved: false,
     };
   },
   async created() {
@@ -131,6 +149,15 @@ export default {
       }
       return "";
     },
+    // Pagination Computed Properties
+    paginatedFiles() {
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.uploadedFiles.slice(start, end);
+    },
+    totalPages() {
+      return Math.ceil(this.uploadedFiles.length / this.itemsPerPage);
+    },
   },
   methods: {
     toggleCollapse() {
@@ -140,6 +167,17 @@ export default {
       localStorage.removeItem("user");
       this.user = null;
       this.$router.push("/login");
+    },
+    // Pagination Methods
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
+      }
+    },
+    previousPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+      }
     },
     async fetchUserFiles() {
       try {
@@ -166,9 +204,11 @@ export default {
         if (file.name.toLowerCase().endsWith(".geojson")) {
           this.uploadedFile = file;
           this.readGeoJSONFile(file);
+          this.isSaved = false;
         } else if (file.name.toLowerCase().endsWith(".kml")) {
           this.uploadedFile = file;
           this.readGeoJSONFile(file);
+          this.isSaved = false;
         } else {
           alert("Please upload a valid GeoJSON file.");
         }
@@ -262,7 +302,8 @@ export default {
           },
         };
         const response = await apiClient.post("/files/upload", payload);
-        alert("GeoJSON data saved successfully!");
+        this.isSaved = true;
+
         this.uploadedFiles.push({
           name: this.uploadedFile.name,
           data: this.geoJSONData,
@@ -338,6 +379,7 @@ export default {
     async fetchFileData(filePath) {
       try {
         const filename = filePath.split('\\').pop();
+        console.log(filename)
         const response = await apiClient.get(`/files/${filename}`);
         const fileContent = response.data.data;
         if (fileContent) {
@@ -381,7 +423,8 @@ export default {
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
-  background-color: #f7f7f7;
+  background-color:#1d1f2e;
+  height: 482px;
 }
 
 /* Notification Style */
@@ -441,7 +484,7 @@ export default {
 .sidebar {
   width: 100%;
   background-color: #ffffff;
-  padding: 1rem;
+  padding: 0.4rem;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
@@ -522,8 +565,8 @@ export default {
 .upload-section {
   /* display: flex!important; */
   /* flex-direction: column; */
-  gap: 1rem;
-  align-items: center;
+  /* gap: 1rem;
+  align-items: center; */
   margin-bottom: 1rem;
 }
 
@@ -531,10 +574,11 @@ export default {
   background-color: #1d1f2e;
   color: white;
   padding: 8px 24px;
-  border-radius: 8px;
+  border-radius: 20px;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 15px;
   transition: background-color 0.3s ease;
+  margin-right: 4px;
 }
 
 .upload-label:hover {
@@ -548,10 +592,10 @@ export default {
 .clear-btn {
   background-color: #e74c3c;
   color: white;
-  font-size: 16px;
-  padding: 8px 20px;
+  /* font-size: 16px; */
+  /* padding: 8px 20px; */
   border: none;
-  border-radius: 5px;
+  /* border-radius: 5px; */
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
@@ -569,6 +613,14 @@ export default {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   font-family: 'Courier New', Courier, monospace;
 }
+
+/* .geojson-card{
+  text-align:initial;
+} */
+/* .action-buttons {
+   display: flex;
+  justify-content: center; 
+} */
 
 .geojson-data h3 {
   font-size: 20px;
@@ -591,7 +643,7 @@ export default {
   color: white;
   padding: 10px 20px;
   border: none;
-  border-radius: 5px;
+  border-radius: 30px;
   cursor: pointer;
   transition: background-color 0.3s ease;
   margin: 10px;
@@ -605,9 +657,17 @@ export default {
 /* File Management */
 .file-management {
   width: 100%;
-  padding: 1rem;
+  padding: 0.4rem;
   background-color: #fff;
   border-radius: 8px;
+}
+
+.no-files-message {
+  background-color: #1d1f2e;
+  padding: 8px 0px;
+  border-radius: 20px;
+  color: white;
+  margin: 0px 70px;
 }
 
 .file-list {
@@ -682,6 +742,7 @@ export default {
 
 .json-display {
   padding: 1rem;
+  text-align: initial;
 }
 
 .save-btn {
@@ -689,10 +750,10 @@ export default {
   color: white;
   padding: 10px 20px;
   border: none;
-  border-radius: 5px;
+  border-radius: 30px;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  margin: 10px 10px auto 10px;
+  margin: 10px auto;
 }
 
 .file-actions {
@@ -735,7 +796,7 @@ export default {
 .edit-textarea {
   width: 100%;
   height: 200px;
-  padding: 1rem;
+  /* padding: 1rem; */
   font-family: 'Courier New', Courier, monospace;
   font-size: 14px;
   border: 1px solid #ccc;
@@ -775,6 +836,7 @@ export default {
 @media (min-width: 768px) {
   .dashboard-container {
     flex-direction: row;
+    height: 100%;
   }
 
   .sidebar {
@@ -790,13 +852,15 @@ export default {
   }
 
   .upload-section {
-    flex-direction: row;
+    /* flex-direction: row; */
+    font-size: 5%;
   }
 }
 
 @media (max-width: 767px) {
   .dashboard-container {
     flex-direction: column;
+    height: 100%;
   }
 
   .sidebar,
@@ -821,14 +885,15 @@ export default {
     font-size: 80%;
   }
 }
+
 .profile-note {
   margin-top: 20px;
-  padding: 10px;
-  background-color: #fff9c4;  
+  padding: 9px;
+  background-color: #fff9c4;
   border-radius: 8px;
   border: 1px solid #1d1f2e;
   font-size: 14px;
-  color: #003366 ; 
+  color: #003366;
   text-align: center;
 }
 
@@ -837,29 +902,68 @@ export default {
 }
 
 .profile-note strong {
-  color: #3498db; /* Highlight the "Note:" text */
+  color: #3498db;
+  /* Highlight the "Note:" text */
 }
+
 @media (max-width: 480px) {
   .profile-card {
-    padding: 15px 0; /* Reduce padding for smaller screens */
+    padding: 15px 0;
+    /* Reduce padding for smaller screens */
   }
 
   .profile-name {
-    font-size: 18px; /* Smaller font size for profile name */
+    font-size: 18px;
+    /* Smaller font size for profile name */
   }
 
   .profile-email {
-    font-size: 14px; /* Smaller font size for email */
+    font-size: 14px;
+    /* Smaller font size for email */
   }
 
   .upload-label {
-    font-size: 16px; /* Smaller font size for upload label */
-    padding: 8px 16px; /* Adjust padding */
+    font-size: 12px;
+    /* Smaller font size for upload label */
+    padding: 8px 16px;
+    /* Adjust padding */
   }
 
   .clear-btn {
-    font-size: 14px; /* Smaller font size for clear button */
-    padding: 8px 16px; /* Adjust padding */
+    font-size: 12px;
+    /* Smaller font size for clear button */
+    padding: 8px 16px;
+    /* Adjust padding */
   }
+
+  .main-content {
+    padding: 0;
+  }
+
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 5px;
+}
+
+.pagination-btn {
+  padding: 5px 10px;
+  margin: 0 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+}
+
+.pagination-btn:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.page-info {
+  margin: 0 10px;
 }
 </style>

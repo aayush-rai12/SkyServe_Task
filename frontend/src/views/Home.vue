@@ -4,6 +4,7 @@
     <div class="text-content">
       <h1>Welcome to Geospatial App</h1>
       <p>Manage and visualize your geospatial data</p>
+      <router-link to="/login" class="login_btn">Login</router-link>
     </div>
 
     <!-- Video Element -->
@@ -97,5 +98,37 @@ video {
   object-fit: cover; 
   width: 100%;
   height: 100%;
+}
+
+.login_btn {
+  display: inline-block;
+  padding: 12px 30px;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  background-color: transparent;
+  border: 2px solid white;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  animation: float 3s ease-in-out infinite; /* Add floating animation */
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateX(0); /* Start and end at the same position */
+  }
+  50% {
+    transform: translateX(-10px); /* Move up by 10px */
+  }
+}
+
+.login_btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  /* animation: none;  */
 }
 </style>

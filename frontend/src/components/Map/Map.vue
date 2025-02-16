@@ -7,6 +7,21 @@
     <a :href="downloadLink" v-if="showDownloadButton" download="map-shapes.geojson" class="download-button">
       <i class="fa-solid fa-circle-arrow-down fa-fade"></i> Downlaod
     </a>
+    <!-- Style Switching Buttons -->
+    <div v-if="distance" id="distance" class="distance-container">
+      <pre style="margin: 0px;">Total distance: {{ distance }} km</pre>
+    </div>
+    <div class="style-buttons addedAllButton">
+      <button class="addedButton" @click="changeProjection('globe')">Globe</button>
+      <button class="addedButton" @click="changeProjection('mercator')">Mercator</button>
+      <button class="addedButton" @click="changeMapStyle('standard')">Standard</button>
+      <button class="addedButton" @click="changeMapStyle('satellite')">Satellite</button>
+      <button class="addedButton" @click="changeMapStyle('streets')">Streets</button>
+      <button class="addedButton" @click="changeMapStyle('outdoors')">Outdoors</button>
+      <button class="addedButton" @click="changeMapStyle('light')">Light</button>
+      <button class="addedButton" @click="changeMapStyle('dark')">Dark</button>
+      <button class="addedButton" @click="changeMapStyle('osm')">OSM</button>
+    </div>
   </div>
 </template>
 
@@ -16,6 +31,9 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
+import * as turf from "@turf/turf";
+import "mapbox-gl/dist/mapbox-gl.css";
+import dotenv from "dotenv";
 // Import Rectangle and Circle modes
 
 
@@ -24,6 +42,10 @@ export default {
     return {
       geojsondata: null,
       showDownloadButton: false,
+      mapProjectionstyle: "globe", // Default projection
+      styleMap: "mapbox://styles/mapbox/streets-v9",
+      map: null, // Store the map instance here
+      distance: null,
     };
   },
   computed: {
@@ -44,12 +66,52 @@ export default {
       return URL.createObjectURL(blob);
     },
   },
+  methods: {
+    //Add methods object here
+    calculateDistance(geojsonData) {
+      let totalDistance = 0;
+      // Loop through the features in geojsonData
+      geojsonData.features.forEach(feature => {
+        if (feature.geometry.type) {
+          // Use turf to calculate the length of the line
+          totalDistance += turf.length(feature, { units: 'kilometers' }); // in kilometers
+        }
+      });
+      this.distance = totalDistance.toFixed(2); // Limit the decimal places
+    },
+    changeProjection(style) {
+      const projectionMap = {
+        globe: "globe",
+        mercator: "mercator",
+      };
+      if (this.map && projectionMap[style]) {
+        this.map.setProjection(projectionMap[style]);
+      } else {
+        console.error("Map is not initialized or invalid projection.");
+      }
+    },
+    changeMapStyle(style) {
+      console.log("Changing map style to:", style);
+      const styleMap = {
+        standard: "mapbox://styles/mapbox/streets-v11",
+        satellite: "mapbox://styles/mapbox/satellite-v9",
+        streets: "mapbox://styles/mapbox/streets-v11",
+        outdoors: "mapbox://styles/mapbox/outdoors-v11",
+        light: "mapbox://styles/mapbox/light-v10",
+        dark: "mapbox://styles/mapbox/dark-v10",
+        osm: "mapbox://styles/mapbox/outdoors-v11",
+      };
+      if (this.map && styleMap[style]) {
+        this.map.setStyle(styleMap[style]);
+      } else {
+        console.error("Map is not initialized or invalid style.");
+      }
+    },
+  },
   mounted() {
     this.$nextTick(() => {
       // Get GeoJSON data from query params
       const geoJSONDataStr = this.$route.query.geoJSONData;
-      console.log("Raw geoJSONData from query:", geoJSONDataStr);
-
       let geoJSONData;
       try {
         if (geoJSONDataStr) {
@@ -75,49 +137,10 @@ export default {
       }
 
       // Fallback GeoJSON data (used if no data is provided or parsing fails)
-      geoJSONData = geoJSONData || {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              coordinates: [138.60657067293045, 36.40282454027016],
-              type: "Point",
-            },
-          },
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              coordinates: [
-                [73.09111445708831, 26.185152777759626],
-                [81.82941051806944, 20.01391957256537],
-              ],
-              type: "LineString",
-            },
-          },
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              coordinates: [
-                [
-                  [77.7356512648347, 9.496458854692307],
-                  [77.7356512648347, 35.061915878872895],
-                  [71.74847521163937, 22.262760683671317],
-                  [83.05758553434191, 22.262760683671317],
-                  [77.7356512648347, 9.496458854692307],
-                ],
-              ],
-              type: "Polygon",
-            },
-          },
-        ],
-      };
+      geoJSONData = geoJSONData || { "type": "FeatureCollection", "features": [{ "type": "Feature", "properties": {}, "geometry": { "coordinates": [[75.0391007337202, 18.304366974068827], [79.14966450908554, 25.087185252984995], [81.2202284513229, 18.52362846247408], [74.43038826390207, 22.866842647743752], [82.68295838359887, 23.070042914401867], [75.09713056979308, 18.36251928396409]], "type": "LineString" } }] };
 
       // Initialize Mapbox GL
-      mapboxgl.accessToken = "pk.eyJ1IjoicGhpbDk4NzY3OCIsImEiOiJjbGx5NDJjZGQwdGpuM2VvOTBmaG54bW5rIn0.KyeDHVXR8dAEaD5gFKMVIg";
+      mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
       const mapContainer = this.$refs.map;
       if (!mapContainer) {
@@ -126,18 +149,19 @@ export default {
       }
 
       // Create a new map
-      const map = new mapboxgl.Map({
+      console.log("aa gya kya ", this.mapProjectionstyle)
+      this.map = new mapboxgl.Map({
         container: mapContainer,
-        style: "mapbox://styles/mapbox/streets-v9",
-        projection: "globe", //globe || mercator || Use globe projection
-        zoom: 1.5, // Initial zoom level
-        center: [0, 0], // Initial center
+        style: this.styleMap, // Use the data property
+        projection: this.mapProjectionstyle, // Use the data property
+        zoom: 1.5,
+        center: [0, 0],
       });
 
       // Add navigation controls (zoom in/out, fullscreen, etc.)
-      map.addControl(new mapboxgl.NavigationControl(), "top-right");
-      map.addControl(new mapboxgl.FullscreenControl(), "top-right");
-      map.addControl(new mapboxgl.ScaleControl(), "bottom-left");
+      this.map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      this.map.addControl(new mapboxgl.FullscreenControl(), "top-right");
+      this.map.addControl(new mapboxgl.ScaleControl(), "bottom-left");
 
       // Add Geolocate control (find user's location)
       const geolocate = new mapboxgl.GeolocateControl({
@@ -145,7 +169,7 @@ export default {
         trackUserLocation: true,
         showUserLocation: true,
       });
-      map.addControl(geolocate);
+      this.map.addControl(geolocate);
 
       // Add Mapbox Geocoder (Search) control
       const geocoder = new MapboxGeocoder({
@@ -154,11 +178,11 @@ export default {
         marker: true, // Add a marker at the searched location
         placeholder: "Search places", // Placeholder text for the search bar
       });
-      map.addControl(geocoder, "top-left"); // Position the search bar
+      this.map.addControl(geocoder, "top-left"); // Position the search bar
 
       // Set default atmosphere style (fog effect)
-      map.on("style.load", () => {
-        map.setFog({});
+      this.map.on("style.load", () => {
+        this.map.setFog({});
       });
 
       // Add Mapbox Draw control (draw points, lines, polygons)
@@ -167,23 +191,27 @@ export default {
         controls: {
           point: true,
           line_string: true,
+          combine_features: true, // Enable edit (combine) tool
+          uncombine_features: true, // Enable edit (uncombine) tool
           polygon: true,
+          circle: true,
           trash: true,
         },
       });
-      map.addControl(draw, "top-left");
+      this.map.addControl(draw, "top-left");
 
       // Add GeoJSON data as a source and layer to the map
-      map.on("load", () => {
+      this.map.on("load", () => {
         console.log("Map loaded. Adding GeoJSON source and layer...");
 
         // Add GeoJSON source
-        map.addSource("geoJSON-source", {
+        this.map.addSource("geoJSON-source", {
           type: "geojson",
           data: geoJSONData,
         });
+        this.calculateDistance(geoJSONData); // Call the method here
 
-        console.log("GeoJSON source added:", map.getSource("geoJSON-source"));
+        console.log("GeoJSON source added:", this.map.getSource("geoJSON-source"));
 
         // Add layers based on geometry type (points, lines, polygons)
         geoJSONData.features.forEach((feature, index) => {
@@ -191,7 +219,7 @@ export default {
           const sourceId = `geoJSON-source-${index}`;
 
           // Add source for each feature
-          map.addSource(sourceId, {
+          this.map.addSource(sourceId, {
             type: "geojson",
             data: {
               type: "FeatureCollection",
@@ -202,7 +230,7 @@ export default {
           // Add layer based on geometry type
           switch (feature.geometry.type) {
             case "Point":
-              map.addLayer({
+              this.map.addLayer({
                 id: layerId,
                 type: "circle", // Ensure type is defined
                 source: sourceId,
@@ -216,7 +244,7 @@ export default {
               break;
 
             case "LineString":
-              map.addLayer({
+              this.map.addLayer({
                 id: layerId,
                 type: "line", // Ensure type is defined
                 source: sourceId,
@@ -228,7 +256,7 @@ export default {
               break;
 
             case "Polygon":
-              map.addLayer({
+              this.map.addLayer({
                 id: layerId,
                 type: "fill", // Ensure type is defined
                 source: sourceId,
@@ -262,22 +290,22 @@ export default {
 
         if (!bounds.isEmpty()) {
           console.log("Fitting map to bounds:", bounds.toArray());
-          map.fitBounds(bounds, { padding: 50 }); // Add padding if needed
+          this.map.fitBounds(bounds, { padding: 50 }); // Add padding if needed
         } else {
           console.warn("GeoJSON bounds are empty. Cannot fit map to bounds.");
         }
 
         // Handle interactions (click)
-        map.on("click", (e) => {
-          const features = map.queryRenderedFeatures(e.point);
+        this.map.on("click", (e) => {
+          const features = this.map.queryRenderedFeatures(e.point);
           if (features.length) {
             const feature = features[0];
-            console.log("Clicked Feature:", feature.properties.name);
+            console.log("Clicked Feature:", feature);
             if (feature.properties.name) {
               new mapboxgl.Popup()
                 .setLngLat(e.lngLat)
-                .setHTML(feature.properties.name ? `<strong>${feature.properties.name}</strong>` : '<em>Name not available</em>')
-                .addTo(map);
+                .setHTML(feature.properties.name ? `<strong>${feature.properties.name_en}</strong>` : '<em>Name not available</em>')
+                .addTo(this.map);
             }
           }
         });
@@ -285,23 +313,25 @@ export default {
 
       // Handle window resizing
       window.addEventListener("resize", () => {
-        map.resize();
+        this.map.resize();
       });
 
       // Event listener for drawing actions (create, delete, update)
-      map.on("draw.create", (e) => {
+      this.map.on("draw.create", (e) => {
         this.geojsondata = draw.getAll(); // Update this.geojsondata
         console.log("Created Shape:", this.geojsondata);
         this.showDownloadButton = true;
+        this.calculateDistance(this.geojsondata);  // Recalculate the distance
       });
 
-      map.on("draw.delete", (e) => {
+      this.map.on("draw.delete", (e) => {
         console.log("Deleted Shape:", e);
         this.showDownloadButton = false;
       });
 
-      map.on("draw.update", (e) => {
+      this.map.on("draw.update", (e) => {
         console.log("Updated Shape:", e);
+        this.calculateDistance(this.geojsondata);  // Recalculate the distance after update
       });
     });
   },
@@ -348,7 +378,7 @@ export default {
   }
 }
 
-:deep(.mapboxgl-ctrl-geocoder--input){
+:deep(.mapboxgl-ctrl-geocoder--input) {
   border-radius: 13px;
   padding: 6px 33px;
 }
@@ -382,5 +412,58 @@ export default {
 .download-button:hover {
   background-color: #293c63;
   color: white;
+}
+
+.addedAllButton {
+  position: absolute;
+  top: 95%;
+  right: 32%;
+  z-index: 1;
+  background-color: #020e1f;
+  border: none;
+  padding: 5px 9px;
+  cursor: pointer;
+  border-radius: 15px;
+  text-decoration: none;
+  transition: all 0.5s ease-in-out;
+}
+
+.style-buttons button {
+  border: none;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.5s ease-in-out;
+  background-color: transparent;
+  color: aqua;
+}
+
+.style-buttons button:hover {
+  background-color: #1b3258;
+  color: white;
+}
+
+.distance-container {
+  position: absolute;
+  top: 90%;
+  left: 43%;
+  z-index: 1;
+  background-color: #020e1f;
+  color: #7c828e;
+  border: none;
+  padding: 5px 9px;
+  cursor: pointer;
+  border-radius: 15px;
+  text-decoration: none;
+  transition: all 0.5s ease-in-out;
+}
+
+@media screen and (max-width: 768px) {
+  .addedAllButton {
+    right: 0%;
+    top: 95%;
+  }
+  .distance-container {
+      left: 35%;
+  } 
 }
 </style>

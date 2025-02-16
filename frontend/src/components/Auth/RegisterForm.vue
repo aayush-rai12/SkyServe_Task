@@ -1,241 +1,3 @@
-// Registration form component
-<!--
-<template>
-  <div class="register-form">
-    <h2>Create Your Account</h2>
-    <form @submit.prevent="registerUser">
-      <div class="form-group">
-        <label for="name">Name</label>
-        <input
-          type="text"
-          id="name"
-          v-model="name"
-          placeholder="Enter your name"
-          :class="{'input-error': errors.name}"
-        />
-        <small v-if="errors.name" class="error-text">{{ errors.name }}</small>
-      </div>
-
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input
-          type="email"
-          id="email"
-          v-model="email"
-          placeholder="Enter your email"
-          :class="{'input-error': errors.email}"
-        />
-        <small v-if="errors.email" class="error-text">{{ errors.email }}</small>
-      </div>
-
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input
-          type="password"
-          id="password"
-          v-model="password"
-          placeholder="Enter your password"
-          :class="{'input-error': errors.password}"
-        />
-        <small v-if="errors.password" class="error-text">{{ errors.password }}</small>
-      </div>
-
-      <button type="submit" :disabled="isSubmitting" class="submit-btn">
-        {{ isSubmitting ? 'Submitting...' : 'Register' }}
-      </button>
-
-      <p v-if="successMessage" class="success">{{ successMessage }}</p>
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-    </form>
-    <p class="login-link">
-      Already have an account? 
-      <router-link to="/login">Login</router-link>
-    </p>
-  </div>
-</template>
-
-<script>
-import apiClient from '../../utils/apiClient';
-
-export default {
-  data() {
-    return {
-      name: '',
-      email: '',
-      password: '',
-      successMessage: '',
-      errorMessage: '',
-      isSubmitting: false,
-      errors: {},
-    };
-  },
-  methods: {
-    validateForm() {
-      let isValid = true;
-      this.errors = {};
-
-      if (!this.name) {
-        this.errors.name = 'Name is required';
-        isValid = false;
-      }
-
-      if (!this.email) {
-        this.errors.email = 'Email is required';
-        isValid = false;
-      } else if (!this.validateEmail(this.email)) {
-        this.errors.email = 'Invalid email address';
-        isValid = false;
-      }
-
-      if (!this.password) {
-        this.errors.password = 'Password is required';
-        isValid = false;
-      } else if (this.password.length < 6) {
-        this.errors.password = 'Password must be at least 6 characters';
-        isValid = false;
-      }
-
-      return isValid;
-    },
-
-    validateEmail(email) {
-      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return re.test(email);
-    },
-
-    async registerUser() {
-      if (!this.validateForm()) return;
-
-      this.isSubmitting = true;
-      this.successMessage = '';
-      this.errorMessage = '';
-
-      try {
-        const response = await apiClient.post('/users/register', {
-          name: this.name,
-          email: this.email,
-          password: this.password,
-          location: 'Bhilai',
-          image: 'https://example.com/profile.jpg',
-        });
-
-        this.successMessage = 'Registration successful! Redirecting to Login...';
-        this.resetForm();
-
-        setTimeout(() => this.$router.push('/login'), 2000); // Delay before redirect
-      } catch (error) {
-        this.errorMessage = error.response?.data?.message || 'Registration failed!';
-      } finally {
-        this.isSubmitting = false;
-      }
-    },
-
-    resetForm() {
-      this.name = '';
-      this.email = '';
-      this.password = '';
-      this.errors = {};
-    },
-  },
-};
-</script>
-
-<style scoped>
-.register-form {
-  max-width: 450px;
-  margin: 0 auto;
-  padding: 30px;
-  background-color: #34495e;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  font-family: 'Arial', sans-serif;
-  color: white;
-}
-
-h2 {
-  text-align: center;
-  font-size: 24px;
-  margin-bottom: 20px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-label {
-  display: block;
-  margin-bottom: 5px;
-  color: #a2a0a0;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-sizing: border-box;
-  transition: all 0.3s ease;
-}
-
-input:focus {
-  border-color: #007bff;
-}
-
-input.input-error {
-  border-color: #ff4d4d;
-}
-
-small {
-  color: #ff4d4d;
-  font-size: 12px;
-}
-
-.submit-btn {
-  width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.submit-btn:hover {
-  background-color: #0056b3;
-}
-
-.submit-btn:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.success {
-  color: green;
-  font-size: 14px;
-  text-align: center;
-}
-
-.error {
-  color: red;
-  font-size: 14px;
-  text-align: center;
-}
-.login-link a {
-  color: #007bff;
-  text-decoration: none;
-  font-weight: bold;
-  transition: color 0.3s ease;
-}
-
-.login-link a:hover {
-  color: #0056b3;
-}
-</style> 
--->
-
 <template>
   <div class="register-form">
     <h3>Create Your Account</h3>
@@ -244,7 +6,7 @@ small {
     <form @submit.prevent="registerUser" enctype="multipart/form-data">
       <!-- Image Upload Section -->
       <div class="image-upload">
-        <label for="image" v-show="!image" class="image-upload-label" title="Upload image">
+        <label for="image" v-show="!image" class="image-upload-label" title="Upload Profile Image">
           <i class="fa fa-camera" style="color: #34495e;"></i>
           <input type="file" id="image" name="image" ref="fileInput" @change="handleImageUpload" accept="image/*" />
         </label>
@@ -407,7 +169,6 @@ export default {
 
 
     async registerUser() {
-      alert("test");
       if (!this.validateForm()) return;
 
       this.isSubmitting = true;
@@ -415,8 +176,6 @@ export default {
       this.errorMessage = '';
 
       try {
-        console.log(this.image);
-        alert("test");
         // Create FormData object
         const formData = new FormData();
         formData.append('name', this.name);
@@ -425,7 +184,9 @@ export default {
         formData.append('location', this.location);
         formData.append('image', this.image);
         console.log(formData);
-        const response = await apiClient.post('/users/register', formData);
+        const response = await apiClient.post('/users/register',formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
         this.successMessage = 'Registration successful! Redirecting to Login...';
         this.resetForm();
 

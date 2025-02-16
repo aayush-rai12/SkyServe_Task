@@ -7,7 +7,7 @@ const mongoose = require("mongoose");
 const isValidGeoJSON = (geojson) => {
   // check data is object or not
   if (!geojson || typeof geojson !== "object") {
-    return false; 
+    return false;
   }
 
   const validTypes = [
@@ -25,28 +25,28 @@ const isValidGeoJSON = (geojson) => {
   // Check if the type is valid
   // Invalid or missing type
   if (!geojson.type || !validTypes.includes(geojson.type)) {
-    return false; 
+    return false;
   }
 
   // Validate FeatureCollection
   if (geojson.type === "FeatureCollection") {
     // features must be an array
     if (!Array.isArray(geojson.features)) {
-      return false; 
+      return false;
     }
 
     // Validate each feature in the FeatureCollection
     for (const feature of geojson.features) {
       // Invalid feature
       if (!isValidGeoJSON(feature)) {
-        return false; 
+        return false;
       }
     }
   }
 
   // Validate Feature
   if (geojson.type === "Feature") {
-     // Invalid geometry
+    // Invalid geometry
     if (!geojson.geometry || !isValidGeoJSON(geojson.geometry)) {
       return false;
     }
@@ -65,12 +65,11 @@ const isValidGeoJSON = (geojson) => {
   ) {
     // coordinates must be an array
     if (!Array.isArray(geojson.coordinates)) {
-      return false; 
+      return false;
     }
   }
 
-  
-  return true; 
+  return true;
 };
 
 // Sanitize filename to prevent directory traversal
@@ -85,7 +84,7 @@ exports.uploadFile = async (req, res) => {
     console.log("Request File:", req.file ? { originalname: req.file.originalname, mimetype: req.file.mimetype } : null);
 
     // Ensure uploads directory exists
-    const uploadsDir = path.join(__dirname, "..", "uploads");
+    const uploadsDir = path.join(__dirname, "..", "uploads/geoJsonFiles");
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
@@ -126,7 +125,9 @@ exports.uploadFile = async (req, res) => {
         try {
           geojsonData = JSON.parse(geojsonData);
         } catch (error) {
-          return res.status(400).json({ message: "Invalid GeoJSON data format" });
+          return res
+            .status(400)
+            .json({ message: "Invalid GeoJSON data format" });
         }
       }
 
@@ -169,7 +170,9 @@ exports.uploadFile = async (req, res) => {
       });
     }
 
-    return res.status(400).json({ message: "No file or GeoJSON data uploaded" });
+    return res
+      .status(400)
+      .json({ message: "No file or GeoJSON data uploaded" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
@@ -183,7 +186,7 @@ exports.getFilesByUser = async (req, res) => {
     const userId = req.params.userId;
     const cleanedUserId = userId.startsWith(":") ? userId.slice(1) : userId;
     // Validate the userId
-    console.log("cleanedUserId",cleanedUserId);
+    console.log("cleanedUserId", cleanedUserId);
     if (!mongoose.Types.ObjectId.isValid(cleanedUserId)) {
       return res.status(400).json({ message: "Invalid user ID" });
     }
@@ -202,9 +205,27 @@ exports.deleteFile = async (req, res) => {
   try {
     const fileId = req.params.fileId;
 
+    // Find the file in the database
+    const file = await File.findById(fileId);
+
+    if (!file) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Get the file path
+    const filePath =  file.path; // Adjust the path as needed
+
+    // Check if the file exists physically
+    if (fs.existsSync(filePath)) {
+      // Delete the file from the file system
+      fs.unlinkSync(filePath);
+    } else {
+      console.log("File does not exist physically:", filePath);
+    }
+
     // Delete the file from the database
     await File.findByIdAndDelete(fileId);
-
+    console.log("File deleted successfully:", file);
     res.status(200).json({ message: "File deleted successfully" });
   } catch (error) {
     console.error(error);
@@ -214,11 +235,9 @@ exports.deleteFile = async (req, res) => {
 
 // Read file data
 exports.ReadFileData = async (req, res) => {
-  console.log("VegyaMAM");
   try {
-    const filePath1 = path.join(__dirname, 'uploads', req.params.filename);
     //use .. to go back to the root directory
-    const filePath = path.join(__dirname, '..', 'uploads', req.params.filename);
+    const filePath = path.join(__dirname,"../uploads/geoJsonFiles",req.params.filename);
     console.log("filePath",filePath);
     const data = await fs.promises.readFile(filePath, 'utf8');
     res.json({ data });

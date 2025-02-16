@@ -16,13 +16,13 @@ const fileFilter = (req, file, cb) => {
     cb(null, true);
   } else {
     // Reject the file
-    cb(new Error("Invalid file type. Only GeoJSON, KML, and TIFF are allowed."), false);  
+    cb(new Error("Invalid file type. Only GeoJSON and KML are allowed."), false);  
   }
 };
 
 const upload = multer({ storage, fileFilter });
 
-// Route for uploading GeoJSON, KML, and TIFF files
+// Route for uploading GeoJSON, KML
 router.post("/upload", upload.single("file"), fileController.uploadFile);
 
 // New route to fetch files by user ID
