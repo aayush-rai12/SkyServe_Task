@@ -4,14 +4,17 @@ A Full-Stack Web Application for Managing and Visualizing Geospatial Data
 Geo-Data App is a powerful tool for handling, analyzing, and visualizing geospatial data. It allows users to upload, render, and interact with geospatial files like GeoJSON and KML while offering features such as shape drawing, distance measurement, and hover card information etc.
 
 **🛠️ Features**
+
 ✅ User Authentication – Secure user login & registration
 ✅ File Uploads – Supports GeoJSON and KML formats
 ✅ Interactive Map Rendering – Uses Mapbox for smooth visualization
 ✅ Shape Drawing & Editing – Draw, edit, and modify geospatial features
 ✅ Hover Card Information – Displays relevant details on hover
-✅ Distance Measurement & Markers – Measure distances and manage points
+✅ Distance Measurement & Markers – Measure distances and manage points.
+
 
 **Tech Stack**
+
 Frontend
 -Vue.js
 -HTML, CSS, JavaScript
