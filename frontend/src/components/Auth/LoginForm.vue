@@ -93,8 +93,7 @@ export default {
           password: this.password,
         });
 
-        console.log(response.data);
-        alert('Login successfulllllyyy!');
+        // alert('Login successfulllllyyy!');
         const { user, token, expiresIn } = response.data;
 
         // Calculate expiration time (expiresIn is in seconds, convert to milliseconds)

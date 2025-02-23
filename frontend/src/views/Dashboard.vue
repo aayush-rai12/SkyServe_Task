@@ -12,7 +12,7 @@
             <div class="profile-avatar">
 
               <!-- <img src="" alt="User Avatar" /> -->
-              <img :src="user.image.url" alt="User Avatar">
+              <img :src="user.image.url" alt="User Profile">
 
             </div>
           </div>
@@ -20,12 +20,57 @@
           <p class="profile-location">{{ user.location }}</p>
           <p class="profile-email">{{ user.email }}</p>
           <div class="profile-actions">
+            <button @click="openUpdateProfileModal" class="update-btn" title="Update your Details">
+              <i class="fa fa-edit"></i>
+            </button>
             <button @click="logout" class="logout-btn"><i class="fa fa-sign-out-alt"></i> Logout</button>
           </div>
         </div>
         <div class="profile-note">
           <p><strong>Note:</strong> Use this page to upload and manage your GeoJSON files. You can upload, edit, and
             visualize your data here.</p>
+        </div>
+        <!-- Update Profile Modal -->
+        <div v-if="isUpdateModalOpen" class="modal-overlay">
+          <div class="modal-content">
+            <h2>Update Profile</h2>
+            <form @submit.prevent="updateProfile" enctype="multipart/form-data">
+              <div class="form-group">
+                <div class="image-upload" style="display: inline-block;">
+                  <label for="image" v-show="!imagePreview" class="image-upload-label" title="Upload Profile Image">
+                    <i class="fa fa-camera" style="color: #34495e;"></i>
+                    <input type="file" id="image" name="image" ref="fileInput" @change="handleImageUpload"
+                      accept="image/*" />
+                  </label>
+                  <div v-if="imagePreview" class="image-preview" @click="resetImage">
+                    <img :src="imagePreview" alt="Profile Image Preview" />
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" required id="name" v-model="updatedUser.name" />
+              </div>
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" required id="email" v-model="updatedUser.email" />
+              </div>
+              <div class="form-group">
+                <label for="location">Location</label>
+                <input type="text" required id="location" v-model="updatedUser.location" />
+              </div>
+              <div v-if="isUpdating" class="form-actions">
+                <p class="loading-message">Please wait, updating your profile...</p>
+              </div>
+              <div v-else class="form-actions">
+                <button v-if="isSubmitting" type="button" @click="closeUpdateProfileModal"
+                  class="cancel-btn">Cancel</button>
+                <button v-if="isSubmitting" type="submit" class="save_update_btn">Save Changes</button>
+                <p v-if="successMessage" class="success">{{ successMessage }}</p>
+                <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -84,11 +129,11 @@
                 <i :class="file.enabled ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
                 {{ file.enabled ? "Disable" : "Enable" }}
               </button> -->
-              <button @click="mapFile(file)" class="map-btn">
+              <button @click="mapFile(file)" class="map-btn" title="View this geojson data on Map">
                 <i class="fas fa-map"></i> Map
               </button>
               <div class="edit-delete-container">
-                <button @click="editFile(file)" class="edit-btn">
+                <button @click="editFile(file)" class="edit-btn" title="Currently Not Working">
                   <i class="fas fa-edit"></i>
                 </button>
                 <button @click="confirmDeleteFile(index)" class="delete-btn">
@@ -105,7 +150,7 @@
             </button>
             <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
             <button @click="nextPage" :disabled="currentPage === totalPages" class="pagination-btn">
-            Next <i class="fa-solid fa-circle-chevron-right"></i>
+              Next <i class="fa-solid fa-circle-chevron-right"></i>
             </button>
           </div>
         </div>
@@ -134,11 +179,28 @@ export default {
       currentPage: 1, // Track the current page
       itemsPerPage: 5, // Number of items to display per page
       isSaved: false,
+      isSubmitting: true,
+      isUpdating: false,
+      isUpdateModalOpen: false,
+      successMessage: "",
+      errorMessage: "",
+      updatedUser: {
+        name: "",
+        email: "",
+        location: "",
+        image: {
+          url: "",
+        },
+      },
+      image: null,
+      imagePreview: null,
     };
   },
   async created() {
     if (this.user) {
       await this.fetchUserFiles();
+      this.imagePreview = this.user.image.url;
+      this.updatedUser = { ...this.user };
     }
   },
   computed: {
@@ -160,6 +222,101 @@ export default {
     },
   },
   methods: {
+
+    // Check if the updated data is different from the current user data
+    hasChanges() {
+      return (
+        this.updatedUser.name !== this.user.name ||
+        this.updatedUser.email !== this.user.email ||
+        this.updatedUser.location !== this.user.location ||
+        this.image !== null // Check if a new image has been uploaded
+      );
+    },
+    resetImage() {
+      this.image = null;
+      this.imagePreview = null;
+
+      // Ensure that the file input element is available before triggering the file dialog
+      if (this.$refs.fileInput) {
+        // Trigger the file input dialog
+        this.$refs.fileInput.click();
+      } else {
+        console.warn("File input reference is not available.");
+      }
+    },
+
+    handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          this.imagePreview = reader.result; // Update imagePreview with the newly uploaded image
+        };
+        reader.readAsDataURL(file);
+        this.image = file;  // Store the file for later use
+
+        // Reset the input value after the upload to allow re-upload
+        event.target.value = '';
+      }
+    },
+
+
+    openUpdateProfileModal() {
+      this.isSubmitting = true;
+      this.successMessage = "";
+      this.isUpdateModalOpen = true;
+    },
+    closeUpdateProfileModal() {
+      this.isUpdateModalOpen = false;
+    },
+    async updateProfile() {
+      // Check if there are any changes
+      if (!this.hasChanges()) {
+        this.isSubmitting = false;
+        this.successMessage = "No changes were made.";
+        setTimeout(() => {
+          this.closeUpdateProfileModal();
+        }, 2000); // Close the modal after 2 seconds
+        return;
+      }
+      try {
+        this.isUpdating = true; // Start loading state
+        this.successMessage = "";
+        this.errorMessage = "";
+        this.isSubmitting = false;
+
+        const formData = new FormData();
+        formData.append('name', this.updatedUser.name);
+        formData.append('email', this.updatedUser.email);
+        formData.append('location', this.updatedUser.location);
+        if (this.image) {
+          formData.append('image', this.image);
+        }
+
+        const response = await apiClient.put(`/users/update/${this.user._id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+
+        const userDetails = response.data.user;
+
+        // Update the user object with the new details
+        this.user = { ...userDetails };
+        localStorage.setItem("user", JSON.stringify(this.user));
+        this.updatedUser = { ...this.user };
+
+        this.successMessage = "Profile updated successfully!";
+        this.errorMessage = "";
+        setTimeout(() => {
+          this.closeUpdateProfileModal();
+        }, 2000);
+      } catch (error) {
+        this.errorMessage = error.response?.data?.message || 'Failed to update profile.';
+        this.successMessage = "";
+      } finally {
+        this.isUpdating = false;
+        this.isSubmitting = false;
+      }
+    },
     toggleCollapse() {
       this.isCollapsed = !this.isCollapsed;
     },
@@ -199,6 +356,7 @@ export default {
       if (file) {
         if (file.size > 2 * 1024 * 1024) {
           alert("File size exceeds 2MB. Please upload a smaller file.");
+          event.target.value = "";
           return;
         }
         if (file.name.toLowerCase().endsWith(".geojson")) {
@@ -211,6 +369,7 @@ export default {
           this.isSaved = false;
         } else {
           alert("Please upload a valid GeoJSON file.");
+          event.target.value = "";
         }
       }
     },
@@ -238,13 +397,13 @@ export default {
               this.clearFile();
             }
           }
-          // Check if the file is a GeoJSON file
+          // Here I'm checking files is geojson or not
           else if (file.name.toLowerCase().endsWith('.geojson')) {
             alert("Processing GeoJSON file...");
             const data = JSON.parse(fileContent);
             console.log("GeoJSON data:", data);
 
-            // Validate the GeoJSON structure
+            // Here I'm going to validate the GeoJSON data
             if (data && data.type === "FeatureCollection" && Array.isArray(data.features)) {
               this.geoJSONData = data;
               this.uploadedFile.data = data;
@@ -254,7 +413,6 @@ export default {
               this.clearFile();
             }
           }
-          // Handle unsupported file types
           else {
             alert("Unsupported file type. Please upload a GeoJSON or KML file.");
             this.clearFile();
@@ -272,19 +430,7 @@ export default {
       this.editableGeoJSON = "";
       this.editMode = false;
     },
-    confirmToggleFile(file) {
-      const confirmed = confirm(`${file.enabled ? "Disable" : "Enable"} this file?`);
-      if (confirmed) {
-        this.toggleFile(file);
-      }
-    },
-    toggleFile(file) {
-      this.uploadedFiles.forEach(f => {
-        f.enabled = false;
-      });
-      file.enabled = true;
-      this.geoJSONData = file.enabled ? file.data : null;
-    },
+
     async saveGeoJSONData() {
       if (!this.geoJSONData || !this.uploadedFile) {
         alert("No file or data to save.");
@@ -310,15 +456,11 @@ export default {
           enabled: true,
           _id: response.data._id,
         });
-        this.uploadedFiles.forEach(f => {
-          if (f.name !== this.uploadedFile.name) {
-            f.enabled = false;
-          }
-        });
+
         await this.fetchUserFiles();
+        this.$forceUpdate();    
       } catch (error) {
         console.error("Error saving GeoJSON data:", error);
-        alert("Failed to save GeoJSON data.");
       } finally {
         this.isLoading = false;
       }
@@ -407,8 +549,13 @@ export default {
         await apiClient.delete(`/files/${file._id}`);
         this.uploadedFiles.splice(index, 1);
         this.geoJSONData = null;
+        // Reset currentPage if it cross totalPages after deletion
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = this.totalPages;
+        }
       } catch (error) {
         console.error("Error deleting file:", error);
+        this.errorMessage = "Failed to fetch uploaded files. Please try again.";
         alert("Failed to delete file.");
       }
     },
@@ -423,7 +570,7 @@ export default {
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
-  background-color:#1d1f2e;
+  background-color: #1d1f2e;
   height: 482px;
 }
 
@@ -531,7 +678,7 @@ export default {
 }
 
 .profile-actions button {
-  background-color: red;
+  background-color: #3498db;
   color: white;
   border: none;
   border-radius: 20px;
@@ -965,5 +1112,117 @@ export default {
 
 .page-info {
   margin: 0 10px;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #0e0f17;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  color: white;
+}
+
+.form-group {
+  margin-bottom: 8px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: white;
+}
+
+.form-group input {
+  width: 95%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: rebeccapurple;
+}
+
+.cancel-btn,
+.save_update_btn {
+  padding: 8px 16px;
+  border: 1px solid rebeccapurple;
+  border-radius: 30px 0px;
+  cursor: pointer;
+  transition: background 0.5s ease, color 0.3s ease;
+}
+
+.cancel-btn {
+  background: #ccc;
+}
+
+.save_update_btn {
+  background: #42b983;
+  color: white;
+}
+
+.save_update_btn:hover {
+  background: #0c0c0e;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #272525;
+  color: white;
+}
+
+.image-upload-label {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 24px;
+  color: #a2a0a0;
+  background-color: #fff;
+  padding: 1%;
+  border-radius: 35%;
+}
+
+.image-upload input[type="file"] {
+  display: none;
+}
+
+.image-preview {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.image-preview img {
+  max-width: 150px;
+  max-height: 110px;
+  border-radius: 40px;
+  object-fit: cover;
+}
+
+.loading-message {
+  color: #3498db;
+  font-style: italic;
+  margin: 10px 0;
+}
+
+.success {
+  color: #2ecc71;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.error {
+  color: #e74c3c;
+  font-weight: bold;
+  margin: 10px 0;
 }
 </style>

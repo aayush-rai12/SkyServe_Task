@@ -1,11 +1,11 @@
-const File = require("../models/File");
-const fs = require("fs");
-const path = require("path");
-const mongoose = require("mongoose");
+import File from "../models/File.js";
+import fs from "fs";
+import path from "path";
+import mongoose from "mongoose";
+import { fileURLToPath } from "url";
 
-// Manual GeoJSON validation function
+// Validate GeoJSON data
 const isValidGeoJSON = (geojson) => {
-  // check data is object or not
   if (!geojson || typeof geojson !== "object") {
     return false;
   }
@@ -22,8 +22,7 @@ const isValidGeoJSON = (geojson) => {
     "GeometryCollection",
   ];
 
-  // Check if the type is valid
-  // Invalid or missing type
+  // Check if the type is valid or not
   if (!geojson.type || !validTypes.includes(geojson.type)) {
     return false;
   }
@@ -63,7 +62,7 @@ const isValidGeoJSON = (geojson) => {
       "MultiPolygon",
     ].includes(geojson.type)
   ) {
-    // coordinates must be an array
+    // check coordinates is array or not  array
     if (!Array.isArray(geojson.coordinates)) {
       return false;
     }
@@ -77,20 +76,33 @@ const sanitizeFilename = (filename) => {
   return filename.replace(/[^a-zA-Z0-9_.-]/g, "_");
 };
 
-exports.uploadFile = async (req, res) => {
+export const uploadFile = async (req, res) => {
   try {
-    // Log only necessary information
-    console.log("Request Body:", { fileName: req.body.fileName, user: req.body.user ? req.body.user._id : null });
-    console.log("Request File:", req.file ? { originalname: req.file.originalname, mimetype: req.file.mimetype } : null);
+    console.log("Request Body:", {
+      fileName: req.body.fileName,
+      user: req.body.user ? req.body.user._id : null,
+    });
+    console.log(
+      "Request File:",
+      req.file
+        ? { originalname: req.file.originalname, mimetype: req.file.mimetype }
+        : null
+    );
+
+    //current directory using import.meta.url
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const uploadsDir = path.join(__dirname, "..", "uploads", "geoJsonFiles");
+
+    console.log("Constructed uploadsDir:", uploadsDir);
 
     // Ensure uploads directory exists
-    const uploadsDir = path.join(__dirname, "..", "uploads/geoJsonFiles");
     if (!fs.existsSync(uploadsDir)) {
+      console.log("Creating directory:", uploadsDir);
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
     if (req.file) {
-      // Handle file upload via multer
       const uploadedFile = req.file;
 
       // Save the file info to the database
@@ -110,7 +122,7 @@ exports.uploadFile = async (req, res) => {
           name: newFile.name,
           type: newFile.type,
           path: newFile.path,
-          user: newFile.user, // Include user ID in the response
+          user: newFile.user,
         },
       });
     }
@@ -120,7 +132,7 @@ exports.uploadFile = async (req, res) => {
     let UploadedFileName = req.body.fileName || "geojson-file.geojson";
 
     if (geojsonData) {
-      // Convert string to object if necessary
+      // Convert string to object
       if (typeof geojsonData === "string") {
         try {
           geojsonData = JSON.parse(geojsonData);
@@ -150,7 +162,7 @@ exports.uploadFile = async (req, res) => {
 
       // Save file info to the database
       const newFile = new File({
-        user: req.body.user ? req.body.user._id : null, // Use consistent field name
+        user: req.body.user ? req.body.user._id : null,
         name: safeFileName,
         type: "application/geo+json",
         path: filePath,
@@ -165,7 +177,7 @@ exports.uploadFile = async (req, res) => {
           name: newFile.name,
           type: newFile.type,
           path: newFile.path,
-          user: newFile.user, // Include user ID in the response
+          user: newFile.user,
         },
       });
     }
@@ -180,9 +192,9 @@ exports.uploadFile = async (req, res) => {
 };
 
 // getting files by user
-exports.getFilesByUser = async (req, res) => {
+export const getFilesByUser = async (req, res) => {
   try {
-    console.log("Request Params:", req.params); // Log the request params for debugging
+    console.log("Request Params:", req.params);
     const userId = req.params.userId;
     const cleanedUserId = userId.startsWith(":") ? userId.slice(1) : userId;
     // Validate the userId
@@ -201,7 +213,7 @@ exports.getFilesByUser = async (req, res) => {
   }
 };
 // delete function
-exports.deleteFile = async (req, res) => {
+export const deleteFile = async (req, res) => {
   try {
     const fileId = req.params.fileId;
 
@@ -213,7 +225,7 @@ exports.deleteFile = async (req, res) => {
     }
 
     // Get the file path
-    const filePath =  file.path; // Adjust the path as needed
+    const filePath = file.path; // Adjust the path as needed
 
     // Check if the file exists physically
     if (fs.existsSync(filePath)) {
@@ -234,20 +246,28 @@ exports.deleteFile = async (req, res) => {
 };
 
 // Read file data
-exports.ReadFileData = async (req, res) => {
+export const ReadFileData = async (req, res) => {
   try {
-    //use .. to go back to the root directory
-    const filePath = path.join(__dirname,"../uploads/geoJsonFiles",req.params.filename);
-    console.log("filePath",filePath);
-    const data = await fs.promises.readFile(filePath, 'utf8');
+    // Calculate the current directory using import.meta.url
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    // Use .. to go back to the root directory
+    const filePath = path.join(
+      __dirname,
+      "../uploads/geoJsonFiles",
+      req.params.filename
+    );
+    console.log("filePath", filePath);
+    const data = await fs.promises.readFile(filePath, "utf8");
     res.json({ data });
   } catch (error) {
-    console.log("Error",error);
+    console.log("Error", error);
     console.error(error);
 
     // Handle specific errors
-    if (error.code === 'ENOENT') {
-      return res.status(404).json({ error: 'File not found' });
+    if (error.code === "ENOENT") {
+      return res.status(404).json({ error: "File not found" });
     }
     res.status(500).json({ message: "Server error" });
   }

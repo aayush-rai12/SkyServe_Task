@@ -1,14 +1,15 @@
-const mongoose = require("mongoose");
-require("dotenv").config();
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-// MongoDB connection URL
-// const mongoURL = process.env.MONGO_URL;
-const mongoURL =  process.env.MONGO_URL;
+dotenv.config();
+
+// MongoDB connection w
+const mongoURL = process.env.MONGO_URL;
+// const mongoURL = process.env.DB_URL;
 
 // Connect to MongoDB
 mongoose.connect(mongoURL);
 
-// Get the default connection
 const db = mongoose.connection;
 
 db.on("connected", () => {
@@ -23,4 +24,4 @@ db.on("disconnected", () => {
   console.log("MongoDB disconnected. Exiting process...");
 });
 
-module.exports = mongoose;
+export default mongoose;
