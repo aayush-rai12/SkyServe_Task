@@ -229,7 +229,7 @@ export default {
         this.updatedUser.name !== this.user.name ||
         this.updatedUser.email !== this.user.email ||
         this.updatedUser.location !== this.user.location ||
-        this.image !== null // Check if a new image has been uploaded
+        this.image !== null
       );
     },
     resetImage() {

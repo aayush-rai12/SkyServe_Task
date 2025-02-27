@@ -119,10 +119,10 @@ export default {
 
     isSessionExpired() {
       const tokenExpiry = localStorage.getItem('tokenExpiry');
-      if (!tokenExpiry) return true; // No expiry time found, consider session expired
+      if (!tokenExpiry) return true;
 
       const currentTime = new Date().getTime();
-      return currentTime > parseInt(tokenExpiry); // Compare current time with expiry time
+      return currentTime > parseInt(tokenExpiry);
     },
 
     // Logout user and clear session data

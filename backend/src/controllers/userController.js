@@ -28,14 +28,14 @@ export const registerUser = async (req, res) => {
     const uploadResult = await uploadImage(req.file.path, "user_images"); 
 
     // Hash password
-    // const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user with Cloudinary image details
     const user = new User({
       name,
       email,
       location,
-      password,
+      password: hashedPassword,
       image: {
         url: uploadResult.secure_url,
         public_id: uploadResult.public_id,
@@ -46,15 +46,7 @@ export const registerUser = async (req, res) => {
     await user.save();
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: user._id,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1h",
-      }
-    );
+    const token = jwt.sign({id: user._id,},process.env.JWT_SECRET,{expiresIn: "3600",});
 
     // Respond with success message and user data
     res.status(201).json({
@@ -89,8 +81,8 @@ export const userLogin = async (req, res) => {
       });
     }
     console.log("User:", user);
-    // Compare password with the hashed password in the database
-    if (password !== user.password) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(400).json({
         success: false,
         message: "Invalid user password",
@@ -98,10 +90,7 @@ export const userLogin = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "3600s",
-    });
-
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {expiresIn: "3600s",});
     res.status(200).json({
       success: true,
       message: "Login successful",

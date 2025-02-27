@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import path from "path";
-import { fileURLToPath } from "url";
+// import path from "path";
+// import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import mongoose from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js"; 
