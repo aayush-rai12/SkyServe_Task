@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // MongoDB connection w
-const mongoURL = process.env.MONGO_URL;
+const mongoURL = process.env.MONGO_URL_atlas;
 // const mongoURL = process.env.DB_URL;
 
 // Connect to MongoDB

@@ -71,7 +71,6 @@ export const registerUser = async (req, res) => {
 export const userLogin = async (req, res) => {
   const { email, password } = req.body;
   try {
-    // Check if the user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({
@@ -80,7 +79,7 @@ export const userLogin = async (req, res) => {
         details: { email },
       });
     }
-    console.log("User:", user);
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({
@@ -89,8 +88,12 @@ export const userLogin = async (req, res) => {
       });
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {expiresIn: "3600s",});
+    // Set expiration to 3 minutes (180 seconds)
+    const expiresIn = 180;
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: `${expiresIn}s`,
+    });
+
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -101,8 +104,8 @@ export const userLogin = async (req, res) => {
         location: user.location,
         image: user.image,
       },
-      expiresIn: 3600,
-      token: token,
+      token,
+      expiresIn,   // Add expiresIn to response
     });
   } catch (error) {
     console.log(error);

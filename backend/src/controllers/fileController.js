@@ -231,16 +231,12 @@ export const deleteFile = async (req, res) => {
     if (fs.existsSync(filePath)) {
       // Delete the file from the file system
       fs.unlinkSync(filePath);
-    } else {
-      console.log("File does not exist physically:", filePath);
-    }
+    } 
 
     // Delete the file from the database
     await File.findByIdAndDelete(fileId);
-    console.log("File deleted successfully:", file);
     res.status(200).json({ message: "File deleted successfully" });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -258,13 +254,9 @@ export const ReadFileData = async (req, res) => {
       "../uploads/geoJsonFiles",
       req.params.filename
     );
-    console.log("filePath", filePath);
     const data = await fs.promises.readFile(filePath, "utf8");
     res.json({ data });
   } catch (error) {
-    console.log("Error", error);
-    console.error(error);
-
     // Handle specific errors
     if (error.code === "ENOENT") {
       return res.status(404).json({ error: "File not found" });

@@ -12,6 +12,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// const PORT = 'mongodb+srv://ayushwrk1212:GJoIUecaZqA0k8kb@cluster0.z34gw.mongodb.net/'
 
 app.use(cors()); // Enable CORS
 app.use(bodyParser.json());

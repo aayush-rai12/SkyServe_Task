@@ -42,13 +42,17 @@ export default {
       errorMessage: '',
       isSubmitting: false,
       errors: {},
+      sessionTimer: null,
     };
   },
   mounted() {
-    // Check if session has expired when the page loads
-    if (this.isSessionExpired()) {
-      console.log('Session expired! Logging out...');
-      this.logout();
+    // Start session check timer
+    this.startSessionTimer();
+  },
+  beforeDestroy() {
+    // Clear timer when component is destroyed
+    if (this.sessionTimer) {
+      clearInterval(this.sessionTimer);
     }
   },
   methods: {
@@ -93,23 +97,17 @@ export default {
           password: this.password,
         });
 
-        // alert('Login successfulllllyyy!');
         const { user, token, expiresIn } = response.data;
 
-        // Calculate expiration time (expiresIn is in seconds, convert to milliseconds)
-        const expiryTime = new Date().getTime() + expiresIn * 1000;
+        // Store user data and token
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('token', token);
-        localStorage.setItem('tokenExpiry', expiryTime);
+        localStorage.setItem('tokenExpiry', new Date().getTime() + (expiresIn * 1000));
 
         this.successMessage = 'Login successful!';
-        this.$router.push('/dashboard');
-
-        // Automatically log out after expiresIn seconds
-        setTimeout(() => {
-          console.log('Session expired! Logging outtest...');
-          this.logout();
-        }, expiresIn * 1000); // expiresIn is in seconds
+        
+        // Navigate to dashboard
+        await this.$router.push('/dashboard');
       } catch (error) {
         this.errorMessage = error.response?.data?.message || 'Login failed!';
       } finally {
@@ -117,22 +115,35 @@ export default {
       }
     },
 
-    isSessionExpired() {
-      const tokenExpiry = localStorage.getItem('tokenExpiry');
-      if (!tokenExpiry) return true;
-
-      const currentTime = new Date().getTime();
-      return currentTime > parseInt(tokenExpiry);
+    startSessionTimer() {
+      // Check session every minute
+      this.sessionTimer = setInterval(() => {
+        console.log('Checking session expiry...');
+        
+        if (this.isSessionExpired()) {
+          this.handleSessionExpiry();
+        }
+      }, 10000); // Check every minute
     },
 
-    // Logout user and clear session data
+    isSessionExpired() {
+      const tokenExpiry = localStorage.getItem('tokenExpiry');
+      if (!tokenExpiry) return false;
+      return Date.now() > parseInt(tokenExpiry);
+    },
+
+    handleSessionExpiry() {
+      clearInterval(this.sessionTimer);
+      alert('Your session has expired. Please login again.');
+      this.logout();
+    },
+
     logout() {
-      console.log('Logging out...');
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('tokenExpiry');
       this.$router.push('/login');
-    }
+    },
   }
 };
 </script>
