@@ -118,7 +118,6 @@ export default {
     startSessionTimer() {
       // Check session every minute
       this.sessionTimer = setInterval(() => {
-        console.log('Checking session expiry...');
         
         if (this.isSessionExpired()) {
           this.handleSessionExpiry();

@@ -78,27 +78,15 @@ const sanitizeFilename = (filename) => {
 
 export const uploadFile = async (req, res) => {
   try {
-    console.log("Request Body:", {
-      fileName: req.body.fileName,
-      user: req.body.user ? req.body.user._id : null,
-    });
-    console.log(
-      "Request File:",
-      req.file
-        ? { originalname: req.file.originalname, mimetype: req.file.mimetype }
-        : null
-    );
-
+    
     //current directory using import.meta.url
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const uploadsDir = path.join(__dirname, "..", "uploads", "geoJsonFiles");
 
-    console.log("Constructed uploadsDir:", uploadsDir);
 
     // Ensure uploads directory exists
     if (!fs.existsSync(uploadsDir)) {
-      console.log("Creating directory:", uploadsDir);
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
@@ -156,7 +144,6 @@ export const uploadFile = async (req, res) => {
       try {
         fs.writeFileSync(filePath, JSON.stringify(geojsonData));
       } catch (error) {
-        console.error("Error writing file:", error);
         return res.status(500).json({ message: "Failed to save GeoJSON file" });
       }
 
@@ -186,7 +173,6 @@ export const uploadFile = async (req, res) => {
       .status(400)
       .json({ message: "No file or GeoJSON data uploaded" });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -194,11 +180,9 @@ export const uploadFile = async (req, res) => {
 // getting files by user
 export const getFilesByUser = async (req, res) => {
   try {
-    console.log("Request Params:", req.params);
     const userId = req.params.userId;
     const cleanedUserId = userId.startsWith(":") ? userId.slice(1) : userId;
     // Validate the userId
-    console.log("cleanedUserId", cleanedUserId);
     if (!mongoose.Types.ObjectId.isValid(cleanedUserId)) {
       return res.status(400).json({ message: "Invalid user ID" });
     }
@@ -208,7 +192,6 @@ export const getFilesByUser = async (req, res) => {
     // Send the response
     res.status(200).json(response);
   } catch (error) {
-    console.error("Error fetching files:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

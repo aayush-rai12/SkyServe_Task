@@ -91,7 +91,6 @@ export default {
       }
     },
     changeMapStyle(style) {
-      console.log("Changing map style to:", style);
       const styleMap = {
         standard: "mapbox://styles/mapbox/streets-v11",
         satellite: "mapbox://styles/mapbox/satellite-v9",
@@ -118,7 +117,6 @@ export default {
           // Parse the cleaned string
           geoJSONData = JSON.parse(geoJSONDataStr);
           geoJSONData = JSON.parse(geoJSONData);
-          console.log("Parsed GeoJSON Data:", geoJSONData);
 
           // Validate GeoJSON structure
           if (!geoJSONData) {
@@ -149,7 +147,6 @@ export default {
       }
 
       // Create a new map
-      console.log("aa gya kya ", this.mapProjectionstyle)
       this.map = new mapboxgl.Map({
         container: mapContainer,
         style: this.styleMap, // Use the data property
@@ -202,7 +199,6 @@ export default {
 
       // Add GeoJSON data as a source and layer to the map
       this.map.on("load", () => {
-        console.log("Map loaded. Adding GeoJSON source and layer...");
 
         // Add GeoJSON source
         this.map.addSource("geoJSON-source", {
@@ -211,7 +207,6 @@ export default {
         });
         this.calculateDistance(geoJSONData); // Call the method here
 
-        console.log("GeoJSON source added:", this.map.getSource("geoJSON-source"));
 
         // Add layers based on geometry type (points, lines, polygons)
         geoJSONData.features.forEach((feature, index) => {
@@ -289,10 +284,8 @@ export default {
         });
 
         if (!bounds.isEmpty()) {
-          console.log("Fitting map to bounds:", bounds.toArray());
           this.map.fitBounds(bounds, { padding: 50 }); // Add padding if needed
         } else {
-          console.warn("GeoJSON bounds are empty. Cannot fit map to bounds.");
         }
 
         // Handle interactions (click)
@@ -300,7 +293,6 @@ export default {
           const features = this.map.queryRenderedFeatures(e.point);
           if (features.length) {
             const feature = features[0];
-            console.log("Clicked Feature:", feature);
             if (feature.properties.name) {
               new mapboxgl.Popup()
                 .setLngLat(e.lngLat)
@@ -319,18 +311,15 @@ export default {
       // Event listener for drawing actions (create, delete, update)
       this.map.on("draw.create", (e) => {
         this.geojsondata = draw.getAll(); // Update this.geojsondata
-        console.log("Created Shape:", this.geojsondata);
         this.showDownloadButton = true;
         this.calculateDistance(this.geojsondata);  // Recalculate the distance
       });
 
       this.map.on("draw.delete", (e) => {
-        console.log("Deleted Shape:", e);
         this.showDownloadButton = false;
       });
 
       this.map.on("draw.update", (e) => {
-        console.log("Updated Shape:", e);
         this.calculateDistance(this.geojsondata);  // Recalculate the distance after update
       });
     });

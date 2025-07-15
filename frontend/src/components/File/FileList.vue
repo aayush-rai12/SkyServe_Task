@@ -47,7 +47,6 @@ export default {
       this.user = storedUser; // Set the user data from localStorage
       await this.fetchUserFiles(); // Fetch the files if user is found
     } else {
-      console.log("User not logged in.");
     }
   },
   methods: {

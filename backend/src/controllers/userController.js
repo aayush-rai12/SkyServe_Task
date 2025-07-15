@@ -6,7 +6,6 @@ import { uploadImage, deleteImage } from "../config/cloudinary.js";
 
 // Register User with Image Upload
 export const registerUser = async (req, res) => {
-  console.log("Request body: test");
   try {
     const { name, email, location, password } = req.body;
     // Check if the user already exists
@@ -60,10 +59,7 @@ export const registerUser = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.error("Error during registration:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: error.message });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -108,7 +104,6 @@ export const userLogin = async (req, res) => {
       expiresIn,   // Add expiresIn to response
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       success: false,
       message: "Server error",
@@ -121,7 +116,6 @@ export const userLogin = async (req, res) => {
 export const updateUser = async (req, res) => {
   const userId = req.params.id;
   const { name, email, location } = req.body;
-  console.log("User file:", req.file);
 
   try {
     // Find the user in the database
@@ -142,7 +136,6 @@ export const updateUser = async (req, res) => {
       // Delete the old image from Cloudinary if it exists
       if (user.image.public_id) {
         await deleteImage(user.image.public_id);
-        console.log("Deleting old image from Cloudinary");
       }
 
       // Upload new image to Cloudinary
@@ -171,7 +164,6 @@ export const updateUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error updating profile:", error);
     res.status(500).json({
       success: false,
       message: "Server error",

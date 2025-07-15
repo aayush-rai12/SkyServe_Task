@@ -240,9 +240,7 @@ export default {
       if (this.$refs.fileInput) {
         // Trigger the file input dialog
         this.$refs.fileInput.click();
-      } else {
-        console.warn("File input reference is not available.");
-      }
+      } 
     },
 
     handleImageUpload(event) {
@@ -352,7 +350,6 @@ export default {
     },
     handleFileUpload(event) {
       const file = event.target.files[0];
-      console.log(file);
       if (file) {
         if (file.size > 2 * 1024 * 1024) {
           alert("File size exceeds 2MB. Please upload a smaller file.");
@@ -385,7 +382,6 @@ export default {
             // Parse KML content
             const kmlDom = new DOMParser().parseFromString(fileContent, 'text/xml');
             const geoJSON = toGeoJSON.kml(kmlDom);
-            console.log("KML to GeoJSON:", geoJSON);
 
             // Validate the converted GeoJSON
             if (geoJSON && geoJSON.type === "FeatureCollection" && Array.isArray(geoJSON.features)) {
@@ -401,7 +397,6 @@ export default {
           else if (file.name.toLowerCase().endsWith('.geojson')) {
             alert("Processing GeoJSON file...");
             const data = JSON.parse(fileContent);
-            console.log("GeoJSON data:", data);
 
             // Here I'm going to validate the GeoJSON data
             if (data && data.type === "FeatureCollection" && Array.isArray(data.features)) {
@@ -460,7 +455,6 @@ export default {
         await this.fetchUserFiles();
         this.$forceUpdate();    
       } catch (error) {
-        console.error("Error saving GeoJSON data:", error);
       } finally {
         this.isLoading = false;
       }
@@ -485,7 +479,6 @@ export default {
         this.editMode = true;
         this.editableGeoJSON = fileContent;
       } catch (error) {
-        console.error("Error fetching file content:", error);
         alert("Failed to load file content.");
       }
     },
@@ -521,7 +514,6 @@ export default {
     async fetchFileData(filePath) {
       try {
         const filename = filePath.split('\\').pop();
-        console.log(filename)
         const response = await apiClient.get(`/files/${filename}`);
         const fileContent = response.data.data;
         if (fileContent) {
@@ -554,7 +546,6 @@ export default {
           this.currentPage = this.totalPages;
         }
       } catch (error) {
-        console.error("Error deleting file:", error);
         this.errorMessage = "Failed to fetch uploaded files. Please try again.";
         alert("Failed to delete file.");
       }

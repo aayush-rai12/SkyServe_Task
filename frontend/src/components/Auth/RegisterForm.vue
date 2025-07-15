@@ -147,9 +147,7 @@ export default {
       // Ensure that the file input element is available before triggering the file dialog
       if (this.$refs.fileInput) {
         this.$refs.fileInput.click();  // Trigger the file input dialog
-      } else {
-        console.warn("File input reference is not available.");
-      }
+      } 
     },
 
     handleImageUpload(event) {
@@ -183,7 +181,6 @@ export default {
         formData.append('password', this.password);
         formData.append('location', this.location);
         formData.append('image', this.image);
-        console.log(formData);
         const response = await apiClient.post('/users/register',formData, {
           headers: { "Content-Type": "multipart/form-data" }
         });
