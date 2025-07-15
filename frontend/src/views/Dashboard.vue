@@ -27,7 +27,7 @@
           </div>
         </div>
         <div class="profile-note">
-          <p><strong>Note:</strong> Use this page to upload and manage your GeoJSON files. You can upload, edit, and
+          <p><strong>Note:</strong> Use this page to upload and manage your GeoJSON files. You can upload and
             visualize your data here.</p>
         </div>
         <!-- Update Profile Modal -->
