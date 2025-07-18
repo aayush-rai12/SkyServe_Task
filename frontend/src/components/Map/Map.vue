@@ -87,7 +87,7 @@ export default {
       if (this.map && projectionMap[style]) {
         this.map.setProjection(projectionMap[style]);
       } else {
-        console.error("Map is not initialized or invalid projection.");
+        // console.error("Map is not initialized or invalid projection.");
       }
     },
     changeMapStyle(style) {
@@ -103,7 +103,7 @@ export default {
       if (this.map && styleMap[style]) {
         this.map.setStyle(styleMap[style]);
       } else {
-        console.error("Map is not initialized or invalid style.");
+        // console.error("Map is not initialized or invalid style.");
       }
     },
   },
@@ -130,7 +130,7 @@ export default {
           }
         }
       } catch (error) {
-        console.error("Error parsing geoJSONData:", error);
+        // console.error("Error parsing geoJSONData:", error);
         geoJSONData = null;
       }
 
@@ -263,7 +263,7 @@ export default {
               break;
 
             default:
-              console.warn(`Unsupported geometry type: ${feature.geometry.type}`);
+              // console.warn(`Unsupported geometry type: ${feature.geometry.type}`);
               break;
           }
         });
