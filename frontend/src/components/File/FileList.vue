@@ -57,7 +57,6 @@ export default {
         this.uploadedFiles = response.data;
         this.fetchError = false; // Reset any previous error flag
       } catch (error) {
-        console.error("Error fetching files:", error);
         this.fetchError = true; // Set error flag to true and display error message
       }
     },

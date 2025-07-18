@@ -274,11 +274,11 @@ export default {
         this.successMessage = "No changes were made.";
         setTimeout(() => {
           this.closeUpdateProfileModal();
-        }, 2000); // Close the modal after 2 seconds
+        }, 2000); 
         return;
       }
       try {
-        this.isUpdating = true; // Start loading state
+        this.isUpdating = true; 
         this.successMessage = "";
         this.errorMessage = "";
         this.isSubmitting = false;
@@ -310,6 +310,9 @@ export default {
       } catch (error) {
         this.errorMessage = error.response?.data?.message || 'Failed to update profile.';
         this.successMessage = "";
+        setTimeout(()=>{
+          this.logout() 
+        }, 2000);
       } finally {
         this.isUpdating = false;
         this.isSubmitting = false;
@@ -344,8 +347,8 @@ export default {
           this.uploadedFile = enabledFile;
         }
       } catch (error) {
-        console.error("Error fetching files:", error);
-        alert("Failed to fetch uploaded files.");
+        alert(`Failed to fetch uploaded files, ${error.message} Please Login and try again.`);
+        this.logout();
       }
     },
     handleFileUpload(event) {
@@ -525,8 +528,7 @@ export default {
           alert("No GeoJSON data found for this file.");
         }
       } catch (error) {
-        console.error("Error fetching GeoJSON data:", error);
-        alert("Failed to fetch GeoJSON data.");
+        alert("Failed to fetch GeoJSON data.",error.message);
       }
     },
     confirmDeleteFile(index) {

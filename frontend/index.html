@@ -2,26 +2,28 @@
 <html lang="">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="./public/imageFavicon.png" />
+    <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Preload critical CSS -->
-    <link 
-      rel="preload" 
-      href="https://api.mapbox.com/mapbox-gl-js/v3.9.2/mapbox-gl.css" 
-      as="style"
+    <title>Vite App</title>
+
+    <!-- Add Mapbox GL css-->
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.9.2/mapbox-gl.css"
+      rel="stylesheet"
     />
-    <link 
-      rel="preload" 
-      href="https://unpkg.com/@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css" 
-      as="style"
+    <!-- Add Mapbox GL js-->
+    <script
+      src="https://api.mapbox.com/mapbox-gl-js/v3.9.2/mapbox-gl.js"
+      type="text/javascript"
+    ></script>
+    <link
+      href="https://unpkg.com/@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css"
+      rel="stylesheet"
     />
-    <link 
-      rel="preload"
-      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
-      as="style"
-    />
-    
-    <!-- Critical CSS first -->
+    <!-- Add font awesome-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -31,33 +33,11 @@
       #app {
         height: 100vh;
         width: 100vw;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-      #app.loaded {
-        opacity: 1;
       }
     </style>
-
-    <!-- External CSS -->
-    <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.2/mapbox-gl.css" rel="stylesheet" />
-    <link href="https://unpkg.com/@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
-    
-    <title>Vite App</title>
-    
-    <!-- Scripts -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.2/mapbox-gl.js" defer></script>
-    <script src="https://unpkg.com/@turf/turf@6/turf.min.js" defer></script>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
-    <script>
-      // Add loaded class once everything is ready
-      window.addEventListener('load', () => {
-        document.getElementById('app').classList.add('loaded');
-      });
-    </script>
   </body>
 </html>

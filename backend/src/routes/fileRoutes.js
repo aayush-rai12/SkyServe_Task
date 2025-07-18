@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { uploadFile, getFilesByUser, deleteFile, ReadFileData } from "../controllers/fileController.js";
+import verifyToken from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -23,16 +24,16 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// Route for uploading GeoJSON, KML
-router.post("/upload", upload.single("file"), uploadFile);
+// Upload GeoJSON or KML (protected)
+router.post("/upload", verifyToken, upload.single("file"), uploadFile);
 
-// New route to fetch files by user ID
-router.get("/user/:userId", getFilesByUser);
+// Get files for a specific user (protected)
+router.get("/user/:userId", verifyToken, getFilesByUser);
 
-// delete file by id
-router.delete("/:fileId", deleteFile);
+// Delete a file by ID (protected)
+router.delete("/:fileId", verifyToken, deleteFile);
 
-// New route to read file data
-router.get("/:filename", ReadFileData);
+// Read a file by filename
+router.get("/:filename",verifyToken, ReadFileData); 
 
 export default router;

@@ -1,7 +1,10 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import verifyToken from "../middlewares/authMiddleware.js";
 import { uploadImage, deleteImage } from "../config/cloudinary.js";
+import logger from '../utils/logger.js';
+
 // import multersetup from "../config/multer.js";
 
 // Register User with Image Upload
@@ -47,6 +50,8 @@ export const registerUser = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign({id: user._id,},process.env.JWT_SECRET,{expiresIn: "3600",});
 
+    logger.info(`User registered: ${user.email}`);
+
     // Respond with success message and user data
     res.status(201).json({
       success: true,
@@ -59,6 +64,7 @@ export const registerUser = async (req, res) => {
       token,
     });
   } catch (error) {
+    logger.error("Error in registerUser: " + error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
@@ -84,12 +90,13 @@ export const userLogin = async (req, res) => {
       });
     }
 
-    // Set expiration to 3 minutes (180 seconds)
-    const expiresIn = 180;
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    // expiration to 10 minutes (600 seconds)
+    const expiresIn = 600;
+    const token = jwt.sign({ id: user._id, name: user.name, company: "Skyserve"}, process.env.JWT_SECRET, {
       expiresIn: `${expiresIn}s`,
     });
 
+    logger.info(`User login successful: ${user.email}`);
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -104,6 +111,7 @@ export const userLogin = async (req, res) => {
       expiresIn,   // Add expiresIn to response
     });
   } catch (error) {
+    logger.error("Error in userLogin: " + error.message);
     res.status(500).json({
       success: false,
       message: "Server error",
@@ -151,6 +159,7 @@ export const updateUser = async (req, res) => {
     // Save the updated user to the database
     await user.save();
 
+    logger.info(`User profile updated: ${user.email}`);
     // Return the updated user data
     res.status(200).json({
       success: true,
@@ -164,6 +173,7 @@ export const updateUser = async (req, res) => {
       },
     });
   } catch (error) {
+    logger.error("Error in updateUser: " + error.message);
     res.status(500).json({
       success: false,
       message: "Server error",

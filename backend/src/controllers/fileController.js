@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import mongoose from "mongoose";
 import { fileURLToPath } from "url";
+import logger from "../utils/logger.js";
 
 // Validate GeoJSON data
 const isValidGeoJSON = (geojson) => {
@@ -103,6 +104,8 @@ export const uploadFile = async (req, res) => {
 
       await newFile.save();
 
+      logger.info(`File uploaded: ${newFile.name} by user ${newFile.user}`);
+
       return res.status(201).json({
         message: "File uploaded successfully",
         file: {
@@ -144,6 +147,7 @@ export const uploadFile = async (req, res) => {
       try {
         fs.writeFileSync(filePath, JSON.stringify(geojsonData));
       } catch (error) {
+        logger.error("Failed to save GeoJSON file: " + error.message);
         return res.status(500).json({ message: "Failed to save GeoJSON file" });
       }
 
@@ -156,6 +160,8 @@ export const uploadFile = async (req, res) => {
       });
 
       await newFile.save();
+
+      logger.info(`GeoJSON data saved: ${newFile.name} by user ${newFile.user}`);
 
       return res.status(201).json({
         message: "GeoJSON data saved successfully",
@@ -173,6 +179,7 @@ export const uploadFile = async (req, res) => {
       .status(400)
       .json({ message: "No file or GeoJSON data uploaded" });
   } catch (error) {
+    logger.error("Error in uploadFile: " + error.message);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -190,8 +197,10 @@ export const getFilesByUser = async (req, res) => {
     const response = await File.find({ user: cleanedUserId });
 
     // Send the response
+    logger.info(`Fetched files for user: ${cleanedUserId}`);
     res.status(200).json(response);
   } catch (error) {
+    logger.error("Error in getFilesByUser: " + error.message);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -218,8 +227,10 @@ export const deleteFile = async (req, res) => {
 
     // Delete the file from the database
     await File.findByIdAndDelete(fileId);
+    logger.info(`File deleted: ${fileId}`);
     res.status(200).json({ message: "File deleted successfully" });
   } catch (error) {
+    logger.error("Error in deleteFile: " + error.message);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -231,19 +242,21 @@ export const ReadFileData = async (req, res) => {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
 
-    // Use .. to go back to the root directory
     const filePath = path.join(
       __dirname,
       "../uploads/geoJsonFiles",
       req.params.filename
     );
     const data = await fs.promises.readFile(filePath, "utf8");
+    logger.info(`File read: ${req.params.filename}`);
     res.json({ data });
   } catch (error) {
     // Handle specific errors
     if (error.code === "ENOENT") {
+      logger.error("File not found: " + error.message);
       return res.status(404).json({ error: "File not found" });
     }
+    logger.error("Error in ReadFileData: " + error.message);
     res.status(500).json({ message: "Server error" });
   }
 };

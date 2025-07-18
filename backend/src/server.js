@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+import logger from "./utils/logger.js";
 // import path from "path";
 // import { fileURLToPath } from "url";
 import dotenv from "dotenv";
@@ -14,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 
-app.use(cors()); // Enable CORS
+app.use(cors());
 app.use(bodyParser.json());
 
 app.get("/", function (req, res) {
@@ -26,5 +27,5 @@ app.use("/api/users", userRoutes);
 app.use("/api/files", fileRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`App started: Server running on port ${PORT}`);
 });

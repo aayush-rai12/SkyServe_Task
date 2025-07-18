@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
+import logger from '../utils/logger.js'; // Adjust the import based on your logger configuration
 
 dotenv.config();
 
@@ -19,7 +20,7 @@ export const uploadImage = async (filePath, folderName) => {
     });
     return result;
   } catch (error) {
-    console.error('Error uploading to Cloudinary', error);
+    logger.error('Error uploading to Cloudinary', error);
     throw error;
   }
 };
@@ -29,7 +30,7 @@ export const deleteImage = async (publicId) => {
   try {
     await cloudinary.uploader.destroy(publicId);
   } catch (error) {
-    console.error('Error deleting from Cloudinary', error);
+    logger.error('Error deleting from Cloudinary', error);
     throw error;
   }
 };

@@ -6,15 +6,17 @@ import path from "path";
 import fs from "fs";
 import { registerUser, updateUser, userLogin } from "../controllers/userController.js";
 import upload from "../config/multer.js";
+import verifyToken from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 // Register
 router.post("/register", upload.single("image"), registerUser);
 
+// Login
 router.post("/login", userLogin);
 
-// Update User Profile
-router.put('/update/:id', upload.single('image'), updateUser);
+// Update Profile (Protected)
+router.put('/update/:id', verifyToken, upload.single('image'), updateUser);
 
 export default router;

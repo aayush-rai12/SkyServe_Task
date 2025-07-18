@@ -6,6 +6,6 @@ uploads/
 
 # Environment variables
 .env
-
+logs/
 # Package lock file (optional, can be kept if needed)
 package-lock.json 

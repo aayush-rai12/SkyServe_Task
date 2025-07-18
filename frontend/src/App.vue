@@ -1,14 +1,14 @@
 <template>
-  <div id="app" :class="{ 'app-loaded': isLoaded }">
+  <div id="app">
     <!-- App Header -->
     <header v-if="$route.path !== '/'">
       <nav>
         <ul>
           <li><router-link to="/">Home</router-link></li>
-          <!-- <li><router-link to="/login">Login</router-link></li> -->
           <li><router-link to="/register">Register</router-link></li>
-          <li v-if="$route.path !== '/map'"><router-link to="/map" @click="reloadPage">Demo Map</router-link></li>
+          <li v-if="$route.path !== '/map'"><router-link to="/map">Demo Map</router-link></li>
           <li><router-link to="/dashboard">Dashboard</router-link></li>
+          <li><router-link to="/filelist">File List</router-link></li>
         </ul>
       </nav>
     </header>
@@ -28,15 +28,7 @@
 <script>
 export default {
   name: "App",
-  data() {
-    return {
-      isLoaded: false
-    }
-  },
-  mounted() {
-    this.isLoaded = true;
-  },
-  methods: {
+   methods: {
     reloadPage() {
       window.location.reload();
     }
@@ -56,12 +48,6 @@ export default {
   flex-direction: column;
   width: 100%;
   height: 100vh;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-#app.app-loaded {
-  opacity: 1;
 }
 
 header {

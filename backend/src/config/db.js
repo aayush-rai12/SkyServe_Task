@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import logger from "../utils/logger.js";
 
 dotenv.config();
 
@@ -13,15 +14,15 @@ mongoose.connect(mongoURL);
 const db = mongoose.connection;
 
 db.on("connected", () => {
-  console.log("Connected to MongoDB server");
+  logger.info("Connected to MongoDB server");
 });
 
 db.on("error", (err) => {
-  console.error("MongoDB connection error:", err);
+  logger.error("MongoDB connection error:", err);
 });
 
 db.on("disconnected", () => {
-  console.log("MongoDB disconnected. Exiting process...");
+  logger.info("MongoDB disconnected. Exiting process...");
 });
 
 export default mongoose;
