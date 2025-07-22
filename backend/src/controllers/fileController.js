@@ -251,7 +251,7 @@ export const ReadFileData = async (req, res) => {
     logger.info(`File read: ${req.params.filename}`);
     res.json({ data });
   } catch (error) {
-    // Handle specific errors
+    // Handle specific errors like file not found/ unable to fatch data 
     if (error.code === "ENOENT") {
       logger.error("File not found: " + error.message);
       return res.status(404).json({ error: "File not found" });
@@ -260,3 +260,4 @@ export const ReadFileData = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+

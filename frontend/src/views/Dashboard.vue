@@ -516,7 +516,7 @@ export default {
     },
     async fetchFileData(filePath) {
       try {
-        const filename = filePath.split('\\').pop();
+        const filename = filePath.split(/[\\/]/).pop();
         const response = await apiClient.get(`/files/${filename}`);
         const fileContent = response.data.data;
         if (fileContent) {
